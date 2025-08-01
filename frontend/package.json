@@ -1,5 +1,5 @@
 {
-  "name": "driver-graph-react",
+  "name": "f1-graph",
   "version": "0.1.0",
   "private": true,
   "proxy": "http://localhost:8000",
@@ -16,7 +16,7 @@
     "react": "^19.1.0",
     "react-cytoscapejs": "^2.0.0",
     "react-dom": "^19.1.0",
-    "react-scripts": "5.0.1",
+    "react-scripts": "^5.0.1",
     "typescript": "^4.9.5",
     "web-vitals": "^2.1.4"
   },

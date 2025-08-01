@@ -1,37 +1,24 @@
 from networkx.algorithms.shortest_paths.generic import shortest_path_length
 import csv
 import networkx as nx
-from pydantic import BaseModel, field_validator, Field
-from typing import Optional
 from datetime import date
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
+from data_types import Driver, Race, Teammates
 
 # GLOBAL DATA
 drivers = {}
 races = {}
+results = {}
 
-
-class Driver(BaseModel):
-    driverId: int
-    driverRef: str
-    number: Optional[int]
-    code: str
-    forename: str
-    surname: str
-    dob: date
-    nationality: str
-    # list of teammates by driverId
-    teammates: set[int] = Field(default_factory=set)
-
-    # @field_validator('number', mode='before')
-    # @classmethod
-    # def process_driver_number(cls, v: str) -> int:
-    #     if v == '\N':
-    #         return None
-    #     return int(v)
-
-
+def load_races(file_path: str) -> dict[int, Race]:
+    map = {}
+    with open(file_path, newline='', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            map[row['raceId']] = Race(**row)
+    return map
+            
 def load_drivers(file_path: str) -> dict[int, Driver]:
     with open(file_path, newline='', encoding='utf-8') as f:
         reader = csv.DictReader(f)
@@ -158,15 +145,20 @@ app = FastAPI()
 drivers = load_drivers('data/drivers.csv')
 
 # key will be raceId, val will be list of (driverId, constructorId)
-races = {}
-with open('data/results.csv', newline='', encoding='utf-8') as f:
-    reader = csv.DictReader(f)
-    for row in reader:
-        races.setdefault(int(row['raceId']), []).append(
-            (int(row['driverId']), int(row['constructorId'])))
+def load_results(filename: str) -> dict[int, tuple[int,int]]:
+    map = {}
+    with open(filename, newline='', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
 
-for race in races.values():
-    add_teammates(race)
+        for row in reader:
+            map.setdefault(int(row['raceId']), []).append(
+                (int(row['driverId']), int(row['constructorId'])))
+        return map
+
+races = load_races('data/races.csv')
+results = load_results('data/results.csv')
+for result in results.values():
+    add_teammates(result)
 
 # G = build_graph()
 # path = nx.shortest_path(G, source=835, target=592)
