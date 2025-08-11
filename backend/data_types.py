@@ -1,7 +1,16 @@
 from pydantic import BaseModel, field_validator, Field
 from typing import Optional
 from datetime import date
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+
+@dataclass
+class DriverPair:
+    driverId1: int # driverId1 < driverId2
+    driverId2: int
+    constructorId: int
+    firstRaceDate: date
+    lastRaceDate: date
+    raceIds: set[int] = field(default_factory=set)
 
 class Driver(BaseModel):
     driverId: int
@@ -13,6 +22,7 @@ class Driver(BaseModel):
     dob: date
     nationality: str
     teammates: set[int] = Field(default_factory=set) # list of teammates by driverId
+    driverPairs: set[tuple[int, int, int]] = Field(default_factory=set)
     def __str__(self):
         return f"{self.forename} {self.surname}"
     # maybe make teamate list (driverId, constructorId)
@@ -44,8 +54,9 @@ class Race(BaseModel):
     circuitId: int
     name: str
     date: date
-    drivers: list[int] = Field(default_factory=list) # list of drivers who competed by driverId
-    results: list[Result] = Field(default_factory=list)
+    drivers: set[int] = Field(default_factory=set) # set of drivers who competed by driverId
+    ctors: set[int] = Field(default_factory=set) # set of constructors by ctorId
+    results: set[int] = Field(default_factory=set) # set of results by resultId
     def __str__(self):
         return f"{self.year} {self.name}"
 
@@ -54,14 +65,7 @@ class Ctor(BaseModel):
     constructorRef: str
     name: str
     nationality: str
+    driverPairIds: set[tuple[int, int, int]] = Field(default_factory=set)
 
-@dataclass
-class DriverPair:
-    driverId1: int # driverId1 < driverId2
-    driverId2: int
-    constructorId: int
-    firstRaceDate: date
-    lastRaceDate: date
-    raceIds: list[int] = [] # races in which both competed (by race Id)
 
 

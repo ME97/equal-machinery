@@ -52,7 +52,9 @@ def load_ctors(file_path: str) -> dict[int, Ctor]:
 
 def add_results_to_races(race_by_Id: dict[int, Race], result_by_Id: dict[int, Result]):
     for result in result_by_Id.values():
-        race_by_Id[result.raceId].results.append(result)
+        race_by_Id[result.raceId].results.add(result.resultId)
+        race_by_Id[result.raceId].drivers.add(result.driverId)
+        race_by_Id[result.raceId].ctors.add(result.constructorId)
 
 
 if __name__ == '__main__':
@@ -62,28 +64,38 @@ if __name__ == '__main__':
     race_by_Id = load_races('data/races.csv')
     add_results_to_races(race_by_Id, result_by_Id)
 
-    driver_pair_by_tuple: dict[tuple[int, int, int], DriverPair] = dict()
-    # TODO:
-    # go over all results, define every driver pairing
-    #  a driver pairing is defined as (driverId1, driverId2, ctorId)
+    driverPairByTuple: dict[tuple[int, int, int], DriverPair] = dict()
 
-    # for each result, need to pair up drivers for each constructor
-    #   if the driver pairing already exists, update the first / last race
-    #       and list of races
-    # also add each driver pairing to each driver?
     for race in race_by_Id.values():
-        for result1 in race.results:
-            driverId1 = result1.driverId
-            ctorId = result1.constructorId
-            for result2 in race.results:
-                driverId2 = result2.driverId
-                if result1 is not result2 and ctorId == result2.constructorId:
-                    if driverId1 > driverId2:
-                        temp = driverId1
-                        driverId1 = driverId2
-                        driverId2 = temp
+        for ctorId in race.ctors:
+            pair: list[int, int] = list()
+            for resultId in race.results:
+                result: Result = result_by_Id[resultId]
+                if result.constructorId == ctorId:
+                    pair.append(result.driverId)
 
-                    driverPairTuple = (driverId2, driverId1, ctorId)
-                if driverPairTuple not in driver_pair_by_tuple:
-                    driver_pair_by_tuple[driverPairTuple] = DriverPair(
-                        driverId1, driverId2, ctorId, race.date, race.date, list())
+            # smaller driverId goes first, to avoid duplicates
+            driverId1 = min(pair)
+            driverId2 = max(pair)
+            driverPairId = driverId1, driverId2, ctorId
+
+            if driverPairId not in driverPairByTuple:
+                driverPairByTuple[driverPairId] = DriverPair(
+                    driverId1, driverId2, ctorId, race.date, race.date)
+
+            driverPair: DriverPair = driverPairByTuple[driverPairId]
+            driver_by_Id[driverId1].driverPairs.add(driverPairId)
+            driver_by_Id[driverId2].driverPairs.add(driverPairId)
+            ctor_by_Id[ctorId].driverPairIds.add(driverPairId)
+
+            driverPair.raceIds.add(race.raceId)
+            if driverPair.firstRaceDate > race.date:
+                driverPair.firstRaceDate = race.date
+            if driverPair.lastRaceDate < race.date:
+                driverPair.lastRaceDate = race.date
+
+for pairId in driver_by_Id[1].driverPairs:
+    pair: DriverPair = driverPairByTuple[pairId]
+    print(
+        f"{driver_by_Id[pair.driverId1]} was teammates with {driver_by_Id[pair.driverId2]}\
+ at {ctor_by_Id[pair.constructorId].name} from {pair.firstRaceDate} to {pair.lastRaceDate}")
