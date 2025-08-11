@@ -13,9 +13,30 @@ class Driver(BaseModel):
     dob: date
     nationality: str
     teammates: set[int] = Field(default_factory=set) # list of teammates by driverId
+    def __str__(self):
+        return f"{self.forename} {self.surname}"
     # maybe make teamate list (driverId, constructorId)
     # teams (which teams they were on, and for which time periods)
 
+# TODO: Add more fields to this (grid pos, finish pos, points, etc)
+class Result(BaseModel):
+    resultId: int
+    raceId: int
+    driverId: int
+    constructorId: int
+    position: Optional[int] # None if retired, DNF, etc (TODO: add field indicating this)
+    
+    @field_validator("position", mode="before")
+    def handle_null(cls, v):
+        if v == r"\N":  # raw string match
+            return None
+        return v
+
+    def result_str(self, driver_by_Id, race_by_Id):
+        if self.position:
+            return f"{driver_by_Id[self.driverId]} finished in P{self.position} in the {race_by_Id[self.raceId]}"
+        else:
+            return f"{driver_by_Id[self.driverId]} did not finish the {race_by_Id[self.raceId]}"
 
 class Race(BaseModel):
     raceId: int
@@ -24,28 +45,23 @@ class Race(BaseModel):
     name: str
     date: date
     drivers: list[int] = Field(default_factory=list) # list of drivers who competed by driverId
+    results: list[Result] = Field(default_factory=list)
     def __str__(self):
         return f"{self.year} {self.name}"
 
-class Result(BaseModel):
-    resultId: int
-    raceId: int
-    driverId: int
+class Ctor(BaseModel):
     constructorId: int
-    grid: int # 1-20 for grid, 0 for pitlane (or maybe DNS?)
-    position: Optional[int] = None # None for retirement (or maybe DQ?)
-    positionOrder: int
-    points: int
-    statusId: int
+    constructorRef: str
+    name: str
+    nationality: str
 
 @dataclass
-class Teammates:
-    driverId1: int
+class DriverPair:
+    driverId1: int # driverId1 < driverId2
     driverId2: int
     constructorId: int
     firstRaceDate: date
     lastRaceDate: date
-    races: list[Race]
-    raceDelta: int # races won by D1 - races won by D2
-    qualiMargin: float
-    pointsMargin: int
+    raceIds: list[int] = [] # races in which both competed (by race Id)
+
+
