@@ -3,13 +3,29 @@ from typing import Optional
 from datetime import date
 from dataclasses import dataclass, field
 
+#TODO: Change fields to snake_case
+# like this:
+# def to_camel(string: str) -> str:
+#     parts = string.split('_')
+#     return parts[0] + ''.join(word.capitalize() for word in parts[1:])
+
+# class MyBaseModel(BaseModel):
+#     model_config = ConfigDict(
+#         alias_generator=to_camel,
+#         populate_by_name=True
+#     )
+
+# class Driver(MyBaseModel):
+#     driver_id: int
+#     given_name: str
+#     family_name: str
+
 @dataclass
 class DriverPair:
     driverId1: int # driverId1 < driverId2
     driverId2: int
     constructorId: int
-    firstRaceDate: date
-    lastRaceDate: date
+    years: set[int] = field(default_factory=set) # years the drivers appear in at least one result together
     raceIds: set[int] = field(default_factory=set)
 
 class Driver(BaseModel):
@@ -21,6 +37,7 @@ class Driver(BaseModel):
     surname: str
     dob: date
     nationality: str
+    yearsActive: set[int] = Field(default_factory=set) # years that driver appears in at least one result
     teammates: set[int] = Field(default_factory=set) # list of teammates by driverId
     driverPairs: set[tuple[int, int, int]] = Field(default_factory=set)
     def __str__(self):
