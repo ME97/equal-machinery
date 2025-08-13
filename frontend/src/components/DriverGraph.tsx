@@ -17,7 +17,7 @@ type EdgeData = {
   data: {
     source: string;
     target: string;
-    team?: string;
+    ctor: string;
     [key: string]: any;
   };
 };
@@ -83,7 +83,7 @@ export default function DriverGraph() {
           animate: true,
           padding: 50,            // space around graph
           nodeRepulsion: 100000,    // more = more spread
-          // idealEdgeLength: 1000,   // target edge length
+          idealEdgeLength: 100,   // target edge length
           edgeElasticity: 0.1,
           nestingFactor: 1.2,
           componentSpacing: 100,  // spacing between connected clusters
@@ -164,7 +164,7 @@ export default function DriverGraph() {
             const edge = event.target;
             const source = edge.source().data("name") || edge.source().id();
             const target = edge.target().data("name") || edge.target().id();
-            const team = edge.data("team") || "Unknown Team";
+            const team = edge.data("ctor") || "Unknown Team";
             setSelectedInfo(`${source} & ${target} were teammates at ${team}`);
           });
 

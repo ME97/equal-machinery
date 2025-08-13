@@ -1,11 +1,15 @@
 import csv
+import json
 from datetime import date
 from data_types import Driver, Race, Ctor, Result, DriverPair
+from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 
 driver_by_id: dict[int, Driver] = dict()
 race_by_id: dict[int, Race] = dict()
 ctor_by_id: dict[int, Ctor] = dict()
 result_by_id: dict[int, Result] = dict()
+driver_pair_by_id: dict[tuple[int, int, int], DriverPair] = dict()
 # returns dictionary with key as driver_id, val as Driver object
 
 
@@ -100,26 +104,38 @@ def populate_driver_pairings(race_by_id: dict[int, Race],
     return driver_pair_by_id
 
 
-if __name__ == '__main__':
-    driver_by_id = load_drivers('data/drivers.csv')
-    ctor_by_id = load_ctors('data/constructors.csv')
-    result_by_id = load_results('data/results.csv')
-    race_by_id = load_races('data/races.csv')
-    process_results(race_by_id, result_by_id, driver_by_id)
+def to_cytoscape_data(driver_by_id: dict[int, Driver], ctor_by_id, driver_pair_by_id, min_year: int = 0, max_year: int = 9999) -> None:
+    seen = set()
+    nodes = []
+    for id in driver_by_id:
+        if min_year < min(driver_by_id[id].years_active) and max(driver_by_id[id].years_active) < max_year:
+            nodes.append(
+                {"data": {"id": str(id), "name": str(driver_by_id[id])}})
+            seen.add(id)
 
-    driver_pair_by_id: dict[tuple[int, int, int], DriverPair] = populate_driver_pairings(
-        race_by_id, result_by_id, driver_by_id, ctor_by_id)
-
-mclaren_drivers = [driver_pair_by_id[tup]
-                  for tup in ctor_by_id[1].driver_pair_ids]
-mclaren_drivers.sort(key=lambda p: min(p.years))
-print(mclaren_drivers[0])
-
-for pair in mclaren_drivers:
-    print(
-        f"{driver_by_id[pair.driver_id_1]} was teammates with {driver_by_id[pair.driver_id_2]}\
- at {ctor_by_id[pair.ctor_id].name} during {sorted(list(pair.years))}")
+    # TODO: What happens if teammates are together on different teams?
+    edges = [
+        {"data": {"source": str(driver_id_1), "target": str(
+            driver_id_2), "ctor": ctor_by_id[ctor_id].name}}
+        for driver_id_1, driver_id_2, ctor_id in driver_pair_by_id if (driver_id_1 in seen and driver_id_2 in seen)
+    ]
+    return {"nodes": nodes, "edges": edges}
 
 
-# TODO: Update graphing functions to create edges based on pairings
-#       - then update frontend to show teams on edges
+driver_by_id = load_drivers('data/drivers.csv')
+ctor_by_id = load_ctors('data/constructors.csv')
+result_by_id = load_results('data/results.csv')
+race_by_id = load_races('data/races.csv')
+process_results(race_by_id, result_by_id, driver_by_id)
+
+driver_pair_by_id = populate_driver_pairings(
+    race_by_id, result_by_id, driver_by_id, ctor_by_id)
+
+# print(to_cytoscape_data(driver_by_id, ctor_by_id, driver_pair_by_id))
+
+app = FastAPI()
+
+
+@app.get("/graph")
+def get_graph():
+    return to_cytoscape_data(driver_by_id, ctor_by_id, driver_pair_by_id, 2000, 2025)
