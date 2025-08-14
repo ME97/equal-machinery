@@ -3,7 +3,10 @@
 import { useEffect, useState, useRef } from "react";
 import CytoscapeComponent from "react-cytoscapejs";
 import cytoscape, { Core, EdgeSingular, EventObject, NodeSingular } from "cytoscape";
+import coseBilkent from "cytoscape-cose-bilkent";
 import { trace } from "console";
+
+cytoscape.use(coseBilkent);
 
 type NodeData = {
   data: {
@@ -58,11 +61,106 @@ export default function DriverGraph() {
         positions[node.id()] = { x, y };
       });
 
+      // cy.layout({
+      //   name: 'preset',
+      //   positions
+      // }
+      // ).run();
+      var defaultOptions = {
+        // Called on `layoutready`
+        ready: function () {
+        },
+        // Called on `layoutstop`
+        stop: function () {
+        },
+        // 'draft', 'default' or 'proof" 
+        // - 'draft' fast cooling rate 
+        // - 'default' moderate cooling rate 
+        // - "proof" slow cooling rate
+        quality: 'default',
+        // Whether to include labels in node dimensions. Useful for avoiding label overlap
+        nodeDimensionsIncludeLabels: true,
+        // number of ticks per frame; higher is faster but more jerky
+        refresh: 30,
+        // Whether to fit the network view after when done
+        fit: true,
+        // Padding on fit
+        padding: 10,
+        // Whether to enable incremental mode
+        randomize: true,
+        // Node repulsion (non overlapping) multiplier
+        nodeRepulsion: 4500,
+        // Ideal (intra-graph) edge length
+        idealEdgeLength: 100,
+        // Divisor to compute edge forces
+        edgeElasticity: 0.45,
+        // Nesting factor (multiplier) to compute ideal edge length for inter-graph edges
+        nestingFactor: 0.1,
+        // Gravity force (constant)
+        gravity: 0.25,
+        // Maximum number of iterations to perform
+        numIter: 2500,
+        // Whether to tile disconnected nodes
+        tile: true,
+        // Type of layout animation. The option set is {'during', 'end', false}
+        animate: 'end',
+        // Duration for animate:end
+        animationDuration: 500,
+        // Amount of vertical space to put between degree zero nodes during tiling (can also be a function)
+        tilingPaddingVertical: 10,
+        // Amount of horizontal space to put between degree zero nodes during tiling (can also be a function)
+        tilingPaddingHorizontal: 10,
+        // Gravity range (constant) for compounds
+        gravityRangeCompound: 1.5,
+        // Gravity force (constant) for compounds
+        gravityCompound: 1.0,
+        // Gravity range (constant)
+        gravityRange: 3.8,
+        // Initial cooling factor for incremental layout
+        initialEnergyOnIncremental: 0.5
+      };
+
       cy.layout({
-        name: 'preset',
-        positions
-      }
-      ).run();
+        name: "cose-bilkent", ...defaultOptions
+      }).run();
+
+      // compute the size neede for circles
+      cy.nodes().forEach(node => {
+        // const label = node.data('name');
+        const first_and_last = node.data('name').split(' ');
+        const length = 3; //Math.max(first_and_last[0].length, first_and_last[1].length);
+        const fontSize = 14;
+        const charWidth = fontSize * 0.6; // rough average
+        // const textWidth = label.length * charWidth;
+        const textWidth = length * charWidth;
+        const textHeight = fontSize * 1.25; // account for vertical padding
+
+        const diameter = Math.max(textWidth, textHeight) + 20; // add padding
+
+        node.style({
+          width: diameter,
+          height: diameter
+        });
+      });
+
+      cy.style()
+        .selector('node')
+        .style({
+          shape: 'ellipse',
+          label: (ele: NodeSingular) => {
+            const [first, last] = ele.data('name').split(' ');
+            return last.slice(0, 3);
+            // return `${first}\n${last}`;
+          },
+          'text-valign': 'center',
+          'text-halign': 'center',
+          'font-size': 14,
+          'background-color': '#0074D9',
+          color: '#fff',
+          'text-wrap': 'wrap'
+        })
+        .update();
+
     }
   }, [elements]);
 
@@ -118,33 +216,38 @@ export default function DriverGraph() {
       <CytoscapeComponent
         elements={elements}
         style={{ width: "100%", height: "90%" }}
-        // layout={{
-        //   name: "cose",
-        //   animate: true,
-        //   padding: 50,            // space around graph
-        //   nodeRepulsion: 100000,    // more = more spread
-        //   idealEdgeLength: 100,   // target edge length
-        //   edgeElasticity: 0.1,
-        //   nestingFactor: 1.2,
-        //   componentSpacing: 100,  // spacing between connected clusters
-        //   numIter: 1000,          // more iterations = better layout
-        //   gravity: 5,
-        // }}
+        layout={{
+          name: "cose",
+          animate: true,
+          padding: 50,            // space around graph
+          nodeRepulsion: 100000,    // more = more spread
+          idealEdgeLength: 100,   // target edge length
+          edgeElasticity: 0.1,
+          nestingFactor: 1.2,
+          componentSpacing: 100,  // spacing between connected clusters
+          numIter: 1000,          // more iterations = better layout
+          gravity: 5,
+        }}
         stylesheet={[
           {
             selector: "node",
             style: {
-              label: "data(name)",
+              // label: "data(name)",
               "background-color": "#0074D9",
+              label: (ele: NodeSingular) => {
+                const [first, last] = ele.data('name').split(' ');
+                return last.slice(0, 3);
+                // return `${first}\n${last}`;
+              },
               color: "#fff",
               "text-valign": "center",
               "text-halign": "center",
-              width: "label", // makes size based on label
-              height: "label",
-              padding: "10px",
+              // width: "label", // makes size based on label
+              // height: "width",
+              // padding: "10px",
               "text-wrap": "wrap",
-              "font-size": "10px",
-              "shape": "roundrectangle",
+              "font-size": "14px",
+              "shape": "ellipse",
               "text-margin-y": "5px",
               "text-max-width": "100px",
             },
