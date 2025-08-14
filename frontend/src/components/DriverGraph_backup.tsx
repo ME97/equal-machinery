@@ -2,14 +2,13 @@
 
 import { useEffect, useState, useRef } from "react";
 import CytoscapeComponent from "react-cytoscapejs";
-import cytoscape, { Core, EdgeSingular, EventObject, NodeSingular } from "cytoscape";
+import cytoscape, { Core, EventObject, NodeSingular } from "cytoscape";
 import { trace } from "console";
 
 type NodeData = {
   data: {
     id: string;
     name?: string;
-    years_active: Array<Number>
     [key: string]: any;
   };
 };
@@ -19,7 +18,6 @@ type EdgeData = {
     source: string;
     target: string;
     ctor: string;
-    years: Array<Number>;
     [key: string]: any;
   };
 };
@@ -42,27 +40,7 @@ export default function DriverGraph() {
 
   useEffect(() => {
     if (cyRef.current && elements.length > 0) {
-      const cy = cyRef.current;
-
-      const years = cy.nodes().map(n => Math.min(...n.data('years_active')));
-      const yearMin = Math.min(...years);
-      const yearMax = Math.max(...years);
-      const yearRange = yearMax - yearMin || 1;
-      const positions: cytoscape.NodePositionMap = {};
-
-      cy.nodes().forEach((node, i) => {
-        const years: number[] = node.data('years_active') ?? [];
-        const driver_start_year = years.length ? Math.min(...years) : yearMin;
-        const x = ((driver_start_year - yearMin) / yearRange) * 800;
-        const y = Math.random() * 500;
-        positions[node.id()] = { x, y };
-      });
-
-      cy.layout({
-        name: 'preset',
-        positions
-      }
-      ).run();
+      cyRef.current.layout({ name: "cose", animate: true }).run();
     }
   }, [elements]);
 
@@ -76,7 +54,6 @@ export default function DriverGraph() {
     // Use built-in Dijkstra (or use .aStar() if you want heuristics)
     const dijkstra = cy.elements().dijkstra({ root: `#${sourceId}` });
     const path = dijkstra.pathTo(cy.getElementById(targetId));
-
 
     if (path.length === 0) {
       alert("No path found.");
@@ -93,23 +70,6 @@ export default function DriverGraph() {
     const sourceName: string = cy.getElementById(`${sourceId}`).data("name");
     const targetName: string = cy.getElementById(`${targetId}`).data("name");
     setSelectedInfo(`Shortest path from ${sourceName} to ${targetName} is ${Math.floor(path.length / 2)} steps`);
-
-    const parts = [];
-
-    for (var i = 0; i < path.length; ++i) {
-      const ele = path[i];
-      if (ele.isNode()) {
-        parts.push(ele.data("name"));
-      }
-      if (ele.isEdge()) {
-        parts.push(ele.data("ctor"));
-      }
-    }
-    const pathString = parts.join(' -> ');
-    console.log(pathString);
-    setSelectedInfo(pathString);
-
-
   };
 
 
@@ -118,18 +78,18 @@ export default function DriverGraph() {
       <CytoscapeComponent
         elements={elements}
         style={{ width: "100%", height: "90%" }}
-        // layout={{
-        //   name: "cose",
-        //   animate: true,
-        //   padding: 50,            // space around graph
-        //   nodeRepulsion: 100000,    // more = more spread
-        //   idealEdgeLength: 100,   // target edge length
-        //   edgeElasticity: 0.1,
-        //   nestingFactor: 1.2,
-        //   componentSpacing: 100,  // spacing between connected clusters
-        //   numIter: 1000,          // more iterations = better layout
-        //   gravity: 5,
-        // }}
+        layout={{
+          name: "cose",
+          animate: true,
+          padding: 50,            // space around graph
+          nodeRepulsion: 100000,    // more = more spread
+          idealEdgeLength: 100,   // target edge length
+          edgeElasticity: 0.1,
+          nestingFactor: 1.2,
+          componentSpacing: 100,  // spacing between connected clusters
+          numIter: 1000,          // more iterations = better layout
+          gravity: 5,
+        }}
         stylesheet={[
           {
             selector: "node",
@@ -183,54 +143,52 @@ export default function DriverGraph() {
           cyRef.current = cy;
 
           if ((cy as any)._driverGraphEventsBound !== true) {
-            (cy as any)._driverGraphEventsBound = true; // gaurd against binding duplicate listeners
-            cy.on("tap", "edge", (event: EventObject) => {
-              const edge = event.target;
-              const source = edge.source().data("name") || edge.source().id();
-              const target = edge.target().data("name") || edge.target().id();
-              const team = edge.data("ctor") || "Unknown Team";
-              console.log(edge.data())
-              const years = edge.data("years").join(", ")
+              (cy as any)._driverGraphEventsBound = true;
+          cy.on("tap", "edge", (event: EventObject) => {
+            const edge = event.target;
+            const source = edge.source().data("name") || edge.source().id();
+            const target = edge.target().data("name") || edge.target().id();
+            const team = edge.data("ctor") || "Unknown Team";
+            setSelectedInfo(`${source} & ${target} were teammates at ${team}`);
+          });
 
-              setSelectedInfo(`${source} & ${target} were teammates at ${team} during ${years}`);
-            });
+          cy.on("tap", (event) => {
+            if (event.target === cy) {
+              cy.elements().removeClass("faded highlighted");
+              setSelectedInfo(null);
+              selectedDriversRef.current = [];
+            }
+          });
 
-            cy.on("tap", (event) => {
-              if (event.target === cy) {
-                cy.elements().removeClass("faded highlighted");
-                setSelectedInfo(null);
-                selectedDriversRef.current = [];
-              }
-            });
+          cy.on("tap", "node", (event: EventObject) => {
+            const node = event.target;
+            const driverId = node.id();
+            const driverName = node.data("name")
+            if (selectedDriversRef.current.length === 2) {
+              selectedDriversRef.current = []
+              cy.elements().removeClass("highlighted faded");
+            }
 
-            cy.on("tap", "node", (event: EventObject) => {
-              const node = event.target;
-              const driverId = node.id();
-              const driverName = node.data("name")
-              if (selectedDriversRef.current.length === 2) {
-                selectedDriversRef.current = []
-                cy.elements().removeClass("highlighted faded");
-              }
+            // Prevent duplicate selection
+            if (selectedDriversRef.current.includes(driverId)) return;
 
-              // Prevent duplicate selection
-              if (selectedDriversRef.current.includes(driverId)) return;
+            selectedDriversRef.current = selectedDriversRef.current.concat(driverId);
+            node.addClass("highlighted")
 
-              selectedDriversRef.current = selectedDriversRef.current.concat(driverId);
-              node.addClass("highlighted")
+            if (selectedDriversRef.current.length === 2) {
+              const [sourceId, targetId] = selectedDriversRef.current;
+              highlightShortestPathInBrowser(sourceId, targetId);
 
-              if (selectedDriversRef.current.length === 2) {
-                const [sourceId, targetId] = selectedDriversRef.current;
-                highlightShortestPathInBrowser(sourceId, targetId);
-
-                // Clear selection for next time
-                // selectedDriversRef.current = [];
-              } else {
-                // Optionally show info like "First driver selected: Heidfeld"
-                const years_active = node.data("years_active").join(', ')
-                setSelectedInfo(`Selected: ${driverName}, active during ${years_active}`);
-              }
-            });
-          }
+              // Clear selection for next time
+              // selectedDriversRef.current = [];
+            } else {
+              console.log("here");
+              console.log(selectedDriversRef.current.length);
+              // Optionally show info like "First driver selected: Heidfeld"
+              setSelectedInfo(`Selected: ${driverName}`);
+            }
+          });
+        }
         }}
       />
       {selectedInfo && (

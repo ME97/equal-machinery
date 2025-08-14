@@ -104,19 +104,25 @@ def populate_driver_pairings(race_by_id: dict[int, Race],
     return driver_pair_by_id
 
 
-def to_cytoscape_data(driver_by_id: dict[int, Driver], ctor_by_id, driver_pair_by_id, min_year: int = 0, max_year: int = 9999) -> None:
+def to_cytoscape_data(driver_by_id: dict[int, Driver],
+                      ctor_by_id: dict[int, Ctor],
+                      driver_pair_by_id: dict[int, DriverPair],
+                      min_year: int = 0, max_year: int = 9999) -> None:
     seen = set()
     nodes = []
     for id in driver_by_id:
-        if min_year < min(driver_by_id[id].years_active) and max(driver_by_id[id].years_active) < max_year:
+        year_range: set[int] = set([i for i in range(min_year, max_year + 1)])
+        # if min_year < min(driver_by_id[id].years_active) and max(driver_by_id[id].years_active) < max_year:
+        if driver_by_id[id].years_active & year_range:
             nodes.append(
-                {"data": {"id": str(id), "name": str(driver_by_id[id])}})
+                {"data": {"id": str(id), "name": str(driver_by_id[id]), 
+                          "years_active": sorted(list(driver_by_id[id].years_active))}})
             seen.add(id)
 
     # TODO: What happens if teammates are together on different teams?
     edges = [
         {"data": {"source": str(driver_id_1), "target": str(
-            driver_id_2), "ctor": ctor_by_id[ctor_id].name}}
+            driver_id_2), "ctor": ctor_by_id[ctor_id].name, "years": sorted(list(driver_pair_by_id[driver_id_1, driver_id_2, ctor_id].years))}}
         for driver_id_1, driver_id_2, ctor_id in driver_pair_by_id if (driver_id_1 in seen and driver_id_2 in seen)
     ]
     return {"nodes": nodes, "edges": edges}
@@ -131,11 +137,12 @@ process_results(race_by_id, result_by_id, driver_by_id)
 driver_pair_by_id = populate_driver_pairings(
     race_by_id, result_by_id, driver_by_id, ctor_by_id)
 
-# print(to_cytoscape_data(driver_by_id, ctor_by_id, driver_pair_by_id))
+# print(json.dumps(to_cytoscape_data(driver_by_id,
+#       ctor_by_id, driver_pair_by_id, 2019, 2025)))
 
 app = FastAPI()
 
 
 @app.get("/graph")
 def get_graph():
-    return to_cytoscape_data(driver_by_id, ctor_by_id, driver_pair_by_id, 2000, 2025)
+    return to_cytoscape_data(driver_by_id, ctor_by_id, driver_pair_by_id, 2019, 2025)
