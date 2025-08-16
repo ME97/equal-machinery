@@ -2,9 +2,8 @@
 
 import { useEffect, useState, useRef } from "react";
 import CytoscapeComponent from "react-cytoscapejs";
-import cytoscape, { Core, EdgeSingular, EventObject, NodeSingular } from "cytoscape";
+import cytoscape, { Core, EventObject, NodeSingular } from "cytoscape";
 import coseBilkent from "cytoscape-cose-bilkent";
-import { trace } from "console";
 
 cytoscape.use(coseBilkent);
 
@@ -21,8 +20,13 @@ type EdgeData = {
   data: {
     source: string;
     target: string;
-    ctor: string;
-    years: Array<Number>;
+    ctor: string; // TODO: some driver pairs have multiple ctors (like zhou and bottas at alfa romeo / sauber)
+                  //  - need a way to identify which ctor corresponds to which years
+                  //  - e.g bottas and zhou were teammates at alfa romeo (2022-2023) and sauber (2024)
+                  // Plan:
+                  //    - change ctor to ctors [array of strings], one per ctor shared by drivers
+                  //    - change years to array of tuples (ctor, year)
+    years: number[];
     [key: string]: any;
   };
 };
@@ -30,7 +34,7 @@ type EdgeData = {
 export default function DriverGraph() {
   const [elements, setElements] = useState<(NodeData | EdgeData)[]>([]);
   const [selectedInfo, setSelectedInfo] = useState<string | null>(null);
-  const [selectedDrivers, setSelectedDrivers] = useState<string[]>([]);
+  // const [selectedDrivers, setSelectedDrivers] = useState<string[]>([]);
 
   const selectedDriversRef = useRef<string[]>([]);
   const cyRef = useRef<Core | null>(null);
@@ -47,6 +51,10 @@ export default function DriverGraph() {
     if (cyRef.current && elements.length > 0) {
       const cy = cyRef.current;
 
+      // Right now this is not being used, because we just do a cose-bilkent layout after
+      //  But the idea is to arrange nodes chronologically
+      //  Ideally we would do this initial setup, and then let cose-bilkent move them around a bit
+      //    But so far trying that has not worked...
       const years = cy.nodes().map(n => Math.min(...n.data('years_active')));
       const yearMin = Math.min(...years);
       const yearMax = Math.max(...years);
@@ -61,12 +69,15 @@ export default function DriverGraph() {
         positions[node.id()] = { x, y };
       });
 
+      /* Uncomment this to use the chronological ordering */
       // cy.layout({
       //   name: 'preset',
       //   positions
       // }
       // ).run();
-      var defaultOptions = {
+
+      // cose-bilkent default options
+      const coseBilkentDefaultOptions = {
         // Called on `layoutready`
         ready: function () {
         },
@@ -121,10 +132,11 @@ export default function DriverGraph() {
       };
 
       cy.layout({
-        name: "cose-bilkent", ...defaultOptions
+        name: "cose-bilkent", ...coseBilkentDefaultOptions
       }).run();
 
       // compute the size neede for circles
+      // TODO: Get rid of magic numbers in this section
       cy.nodes().forEach(node => {
         // const label = node.data('name');
         const first_and_last = node.data('name').split(' ');
@@ -149,7 +161,7 @@ export default function DriverGraph() {
           shape: 'ellipse',
           label: (ele: NodeSingular) => {
             const [first, last] = ele.data('name').split(' ');
-            return last.slice(0, 3);
+            return last.slice(0, 3); // TODO: change this to actual 3 letter code
             // return `${first}\n${last}`;
           },
           'text-valign': 'center',
@@ -216,18 +228,20 @@ export default function DriverGraph() {
       <CytoscapeComponent
         elements={elements}
         style={{ width: "100%", height: "90%" }}
-        layout={{
-          name: "cose",
-          animate: true,
-          padding: 50,            // space around graph
-          nodeRepulsion: 100000,    // more = more spread
-          idealEdgeLength: 100,   // target edge length
-          edgeElasticity: 0.1,
-          nestingFactor: 1.2,
-          componentSpacing: 100,  // spacing between connected clusters
-          numIter: 1000,          // more iterations = better layout
-          gravity: 5,
-        }}
+
+        // for now we are running layout in useEffect
+        // layout={{
+        //   name: "cose",
+        //   animate: true,
+        //   padding: 50,            // space around graph
+        //   nodeRepulsion: 100000,    // more = more spread
+        //   idealEdgeLength: 100,   // target edge length
+        //   edgeElasticity: 0.1,
+        //   nestingFactor: 1.2,
+        //   componentSpacing: 100,  // spacing between connected clusters
+        //   numIter: 1000,          // more iterations = better layout
+        //   gravity: 5,
+        // }}
         stylesheet={[
           {
             selector: "node",
@@ -255,11 +269,12 @@ export default function DriverGraph() {
           {
             selector: "edge",
             style: {
-              width: 2,
+              width: 10,
               "line-color": "#aaa",
               "target-arrow-color": "#aaa",
-              label: "data(team)",
-              "font-size": 8,
+              label: "data(ctor)",
+              "font-size": 12,
+              "text-rotation": "autorotate"
             },
           }, {
             selector: ".highlighted",

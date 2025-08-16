@@ -13,6 +13,11 @@ class MyBaseModel(BaseModel):
         populate_by_name=True
     )
 
+# TODO: Change this so that all ctors shared by driver are represnted 
+#        - no more ctor_id, key will be [id_1, id_2], (id_1 < id_2)
+#        - ctor is now list of ints
+#        - years is now list of (ctor, year) tuples
+#           - actually, maybe just a list of (ctor, year tuples, don't need the list of ints)
 @dataclass
 class DriverPair:
     driver_id_1: int # driverId1 < driverId2
