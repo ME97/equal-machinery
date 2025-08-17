@@ -3,269 +3,392 @@
     {
       "data": {
         "id": "1",
-        "name": "Lewis Hamilton"
+        "name": "Lewis Hamilton",
+        "years_active": [
+          2007,
+          2008,
+          2009,
+          2010,
+          2011,
+          2012,
+          2013,
+          2014,
+          2015,
+          2016,
+          2017,
+          2018,
+          2019,
+          2020,
+          2021,
+          2022,
+          2023,
+          2024
+        ]
       }
     },
     {
       "data": {
         "id": "4",
-        "name": "Fernando Alonso"
-      }
-    },
-    {
-      "data": {
-        "id": "8",
-        "name": "Kimi R\u00e4ikk\u00f6nen"
-      }
-    },
-    {
-      "data": {
-        "id": "9",
-        "name": "Robert Kubica"
-      }
-    },
-    {
-      "data": {
-        "id": "20",
-        "name": "Sebastian Vettel"
-      }
-    },
-    {
-      "data": {
-        "id": "154",
-        "name": "Romain Grosjean"
+        "name": "Fernando Alonso",
+        "years_active": [
+          2001,
+          2003,
+          2004,
+          2005,
+          2006,
+          2007,
+          2008,
+          2009,
+          2010,
+          2011,
+          2012,
+          2013,
+          2014,
+          2015,
+          2016,
+          2017,
+          2018,
+          2021,
+          2022,
+          2023,
+          2024
+        ]
       }
     },
     {
       "data": {
         "id": "842",
-        "name": "Pierre Gasly"
+        "name": "Pierre Gasly",
+        "years_active": [
+          2017,
+          2018,
+          2019,
+          2020,
+          2021,
+          2022,
+          2023,
+          2024
+        ]
       }
     },
     {
       "data": {
         "id": "807",
-        "name": "Nico H\u00fclkenberg"
+        "name": "Nico H\u00fclkenberg",
+        "years_active": [
+          2010,
+          2012,
+          2013,
+          2014,
+          2015,
+          2016,
+          2017,
+          2018,
+          2019,
+          2020,
+          2022,
+          2023,
+          2024
+        ]
       }
     },
     {
       "data": {
         "id": "815",
-        "name": "Sergio P\u00e9rez"
+        "name": "Sergio P\u00e9rez",
+        "years_active": [
+          2011,
+          2012,
+          2013,
+          2014,
+          2015,
+          2016,
+          2017,
+          2018,
+          2019,
+          2020,
+          2021,
+          2022,
+          2023,
+          2024
+        ]
       }
     },
     {
       "data": {
         "id": "817",
-        "name": "Daniel Ricciardo"
+        "name": "Daniel Ricciardo",
+        "years_active": [
+          2011,
+          2012,
+          2013,
+          2014,
+          2015,
+          2016,
+          2017,
+          2018,
+          2019,
+          2020,
+          2021,
+          2022,
+          2023,
+          2024
+        ]
       }
     },
     {
       "data": {
         "id": "822",
-        "name": "Valtteri Bottas"
+        "name": "Valtteri Bottas",
+        "years_active": [
+          2013,
+          2014,
+          2015,
+          2016,
+          2017,
+          2018,
+          2019,
+          2020,
+          2021,
+          2022,
+          2023,
+          2024
+        ]
       }
     },
     {
       "data": {
         "id": "825",
-        "name": "Kevin Magnussen"
-      }
-    },
-    {
-      "data": {
-        "id": "826",
-        "name": "Daniil Kvyat"
+        "name": "Kevin Magnussen",
+        "years_active": [
+          2014,
+          2015,
+          2016,
+          2017,
+          2018,
+          2019,
+          2020,
+          2022,
+          2023,
+          2024
+        ]
       }
     },
     {
       "data": {
         "id": "830",
-        "name": "Max Verstappen"
+        "name": "Max Verstappen",
+        "years_active": [
+          2015,
+          2016,
+          2017,
+          2018,
+          2019,
+          2020,
+          2021,
+          2022,
+          2023,
+          2024
+        ]
       }
     },
     {
       "data": {
         "id": "832",
-        "name": "Carlos Sainz"
+        "name": "Carlos Sainz",
+        "years_active": [
+          2015,
+          2016,
+          2017,
+          2018,
+          2019,
+          2020,
+          2021,
+          2022,
+          2023,
+          2024
+        ]
       }
     },
     {
       "data": {
         "id": "839",
-        "name": "Esteban Ocon"
+        "name": "Esteban Ocon",
+        "years_active": [
+          2016,
+          2017,
+          2018,
+          2020,
+          2021,
+          2022,
+          2023,
+          2024
+        ]
       }
     },
     {
       "data": {
         "id": "840",
-        "name": "Lance Stroll"
-      }
-    },
-    {
-      "data": {
-        "id": "841",
-        "name": "Antonio Giovinazzi"
+        "name": "Lance Stroll",
+        "years_active": [
+          2017,
+          2018,
+          2019,
+          2020,
+          2021,
+          2022,
+          2023,
+          2024
+        ]
       }
     },
     {
       "data": {
         "id": "844",
-        "name": "Charles Leclerc"
+        "name": "Charles Leclerc",
+        "years_active": [
+          2018,
+          2019,
+          2020,
+          2021,
+          2022,
+          2023,
+          2024
+        ]
       }
     },
     {
       "data": {
         "id": "846",
-        "name": "Lando Norris"
+        "name": "Lando Norris",
+        "years_active": [
+          2019,
+          2020,
+          2021,
+          2022,
+          2023,
+          2024
+        ]
       }
     },
     {
       "data": {
         "id": "847",
-        "name": "George Russell"
+        "name": "George Russell",
+        "years_active": [
+          2019,
+          2020,
+          2021,
+          2022,
+          2023,
+          2024
+        ]
       }
     },
     {
       "data": {
         "id": "848",
-        "name": "Alexander Albon"
-      }
-    },
-    {
-      "data": {
-        "id": "849",
-        "name": "Nicholas Latifi"
-      }
-    },
-    {
-      "data": {
-        "id": "850",
-        "name": "Pietro Fittipaldi"
-      }
-    },
-    {
-      "data": {
-        "id": "851",
-        "name": "Jack Aitken"
+        "name": "Alexander Albon",
+        "years_active": [
+          2019,
+          2020,
+          2022,
+          2023,
+          2024
+        ]
       }
     },
     {
       "data": {
         "id": "852",
-        "name": "Yuki Tsunoda"
-      }
-    },
-    {
-      "data": {
-        "id": "853",
-        "name": "Nikita Mazepin"
-      }
-    },
-    {
-      "data": {
-        "id": "854",
-        "name": "Mick Schumacher"
+        "name": "Yuki Tsunoda",
+        "years_active": [
+          2021,
+          2022,
+          2023,
+          2024
+        ]
       }
     },
     {
       "data": {
         "id": "855",
-        "name": "Guanyu Zhou"
-      }
-    },
-    {
-      "data": {
-        "id": "856",
-        "name": "Nyck de Vries"
+        "name": "Guanyu Zhou",
+        "years_active": [
+          2022,
+          2023,
+          2024
+        ]
       }
     },
     {
       "data": {
         "id": "857",
-        "name": "Oscar Piastri"
+        "name": "Oscar Piastri",
+        "years_active": [
+          2023,
+          2024
+        ]
       }
     },
     {
       "data": {
         "id": "858",
-        "name": "Logan Sargeant"
+        "name": "Logan Sargeant",
+        "years_active": [
+          2023,
+          2024
+        ]
       }
     },
     {
       "data": {
         "id": "859",
-        "name": "Liam Lawson"
+        "name": "Liam Lawson",
+        "years_active": [
+          2023,
+          2024
+        ]
       }
     },
     {
       "data": {
         "id": "860",
-        "name": "Oliver Bearman"
+        "name": "Oliver Bearman",
+        "years_active": [
+          2024
+        ]
       }
     },
     {
       "data": {
         "id": "861",
-        "name": "Franco Colapinto"
+        "name": "Franco Colapinto",
+        "years_active": [
+          2024
+        ]
       }
     },
     {
       "data": {
         "id": "862",
-        "name": "Jack Doohan"
+        "name": "Jack Doohan",
+        "years_active": [
+          2024
+        ]
       }
     }
   ],
   "edges": [
     {
       "data": {
-        "source": "4",
-        "target": "154",
-        "ctor": "Renault",
-        "years": [
-          2009
-        ]
-      }
-    },
-    {
-      "data": {
         "source": "1",
         "target": "4",
-        "ctor": "McLaren",
-        "years": [
-          2007
-        ]
-      }
-    },
-    {
-      "data": {
-        "source": "8",
-        "target": "154",
-        "ctor": "Lotus F1",
-        "years": [
-          2012,
-          2013
-        ]
-      }
-    },
-    {
-      "data": {
-        "source": "4",
-        "target": "8",
-        "ctor": "Ferrari",
-        "years": [
-          2014
-        ]
-      }
-    },
-    {
-      "data": {
-        "source": "20",
-        "target": "817",
-        "ctor": "Red Bull",
-        "years": [
-          2014
+        "ctor_year": [
+          {
+            "ctor": "McLaren",
+            "year": 2007
+          }
         ]
       }
     },
@@ -273,11 +396,23 @@
       "data": {
         "source": "807",
         "target": "815",
-        "ctor": "Force India",
-        "years": [
-          2014,
-          2015,
-          2016
+        "ctor_year": [
+          {
+            "ctor": "Force India",
+            "year": 2014
+          },
+          {
+            "ctor": "Force India",
+            "year": 2015
+          },
+          {
+            "ctor": "Force India",
+            "year": 2016
+          },
+          {
+            "ctor": "Racing Point",
+            "year": 2020
+          }
         ]
       }
     },
@@ -285,45 +420,15 @@
       "data": {
         "source": "830",
         "target": "832",
-        "ctor": "Toro Rosso",
-        "years": [
-          2015,
-          2016
-        ]
-      }
-    },
-    {
-      "data": {
-        "source": "8",
-        "target": "20",
-        "ctor": "Ferrari",
-        "years": [
-          2015,
-          2016,
-          2017,
-          2018
-        ]
-      }
-    },
-    {
-      "data": {
-        "source": "817",
-        "target": "826",
-        "ctor": "Red Bull",
-        "years": [
-          2015,
-          2016
-        ]
-      }
-    },
-    {
-      "data": {
-        "source": "826",
-        "target": "832",
-        "ctor": "Toro Rosso",
-        "years": [
-          2016,
-          2017
+        "ctor_year": [
+          {
+            "ctor": "Toro Rosso",
+            "year": 2015
+          },
+          {
+            "ctor": "Toro Rosso",
+            "year": 2016
+          }
         ]
       }
     },
@@ -331,11 +436,19 @@
       "data": {
         "source": "817",
         "target": "830",
-        "ctor": "Red Bull",
-        "years": [
-          2016,
-          2017,
-          2018
+        "ctor_year": [
+          {
+            "ctor": "Red Bull",
+            "year": 2016
+          },
+          {
+            "ctor": "Red Bull",
+            "year": 2017
+          },
+          {
+            "ctor": "Red Bull",
+            "year": 2018
+          }
         ]
       }
     },
@@ -343,13 +456,27 @@
       "data": {
         "source": "1",
         "target": "822",
-        "ctor": "Mercedes",
-        "years": [
-          2017,
-          2018,
-          2019,
-          2020,
-          2021
+        "ctor_year": [
+          {
+            "ctor": "Mercedes",
+            "year": 2017
+          },
+          {
+            "ctor": "Mercedes",
+            "year": 2018
+          },
+          {
+            "ctor": "Mercedes",
+            "year": 2019
+          },
+          {
+            "ctor": "Mercedes",
+            "year": 2020
+          },
+          {
+            "ctor": "Mercedes",
+            "year": 2021
+          }
         ]
       }
     },
@@ -357,23 +484,15 @@
       "data": {
         "source": "815",
         "target": "839",
-        "ctor": "Force India",
-        "years": [
-          2017,
-          2018
-        ]
-      }
-    },
-    {
-      "data": {
-        "source": "154",
-        "target": "825",
-        "ctor": "Haas F1 Team",
-        "years": [
-          2017,
-          2018,
-          2019,
-          2020
+        "ctor_year": [
+          {
+            "ctor": "Force India",
+            "year": 2017
+          },
+          {
+            "ctor": "Force India",
+            "year": 2018
+          }
         ]
       }
     },
@@ -381,9 +500,11 @@
       "data": {
         "source": "832",
         "target": "842",
-        "ctor": "Toro Rosso",
-        "years": [
-          2017
+        "ctor_year": [
+          {
+            "ctor": "Toro Rosso",
+            "year": 2017
+          }
         ]
       }
     },
@@ -391,10 +512,15 @@
       "data": {
         "source": "807",
         "target": "832",
-        "ctor": "Renault",
-        "years": [
-          2017,
-          2018
+        "ctor_year": [
+          {
+            "ctor": "Renault",
+            "year": 2017
+          },
+          {
+            "ctor": "Renault",
+            "year": 2018
+          }
         ]
       }
     },
@@ -402,10 +528,15 @@
       "data": {
         "source": "832",
         "target": "846",
-        "ctor": "McLaren",
-        "years": [
-          2019,
-          2020
+        "ctor_year": [
+          {
+            "ctor": "McLaren",
+            "year": 2019
+          },
+          {
+            "ctor": "McLaren",
+            "year": 2020
+          }
         ]
       }
     },
@@ -413,40 +544,11 @@
       "data": {
         "source": "807",
         "target": "817",
-        "ctor": "Renault",
-        "years": [
-          2019
-        ]
-      }
-    },
-    {
-      "data": {
-        "source": "826",
-        "target": "848",
-        "ctor": "Toro Rosso",
-        "years": [
-          2019
-        ]
-      }
-    },
-    {
-      "data": {
-        "source": "20",
-        "target": "844",
-        "ctor": "Ferrari",
-        "years": [
-          2019,
-          2020
-        ]
-      }
-    },
-    {
-      "data": {
-        "source": "9",
-        "target": "847",
-        "ctor": "Williams",
-        "years": [
-          2019
+        "ctor_year": [
+          {
+            "ctor": "Renault",
+            "year": 2019
+          }
         ]
       }
     },
@@ -454,21 +556,11 @@
       "data": {
         "source": "830",
         "target": "842",
-        "ctor": "Red Bull",
-        "years": [
-          2019
-        ]
-      }
-    },
-    {
-      "data": {
-        "source": "8",
-        "target": "841",
-        "ctor": "Alfa Romeo",
-        "years": [
-          2019,
-          2020,
-          2021
+        "ctor_year": [
+          {
+            "ctor": "Red Bull",
+            "year": 2019
+          }
         ]
       }
     },
@@ -476,20 +568,15 @@
       "data": {
         "source": "815",
         "target": "840",
-        "ctor": "Racing Point",
-        "years": [
-          2019,
-          2020
-        ]
-      }
-    },
-    {
-      "data": {
-        "source": "826",
-        "target": "842",
-        "ctor": "Toro Rosso",
-        "years": [
-          2019
+        "ctor_year": [
+          {
+            "ctor": "Racing Point",
+            "year": 2019
+          },
+          {
+            "ctor": "Racing Point",
+            "year": 2020
+          }
         ]
       }
     },
@@ -497,10 +584,15 @@
       "data": {
         "source": "830",
         "target": "848",
-        "ctor": "Red Bull",
-        "years": [
-          2019,
-          2020
+        "ctor_year": [
+          {
+            "ctor": "Red Bull",
+            "year": 2019
+          },
+          {
+            "ctor": "Red Bull",
+            "year": 2020
+          }
         ]
       }
     },
@@ -508,30 +600,11 @@
       "data": {
         "source": "817",
         "target": "839",
-        "ctor": "Renault",
-        "years": [
-          2020
-        ]
-      }
-    },
-    {
-      "data": {
-        "source": "847",
-        "target": "849",
-        "ctor": "Williams",
-        "years": [
-          2020,
-          2021
-        ]
-      }
-    },
-    {
-      "data": {
-        "source": "826",
-        "target": "842",
-        "ctor": "AlphaTauri",
-        "years": [
-          2020
+        "ctor_year": [
+          {
+            "ctor": "Renault",
+            "year": 2020
+          }
         ]
       }
     },
@@ -539,19 +612,15 @@
       "data": {
         "source": "807",
         "target": "840",
-        "ctor": "Racing Point",
-        "years": [
-          2020
-        ]
-      }
-    },
-    {
-      "data": {
-        "source": "807",
-        "target": "815",
-        "ctor": "Racing Point",
-        "years": [
-          2020
+        "ctor_year": [
+          {
+            "ctor": "Racing Point",
+            "year": 2020
+          },
+          {
+            "ctor": "Aston Martin",
+            "year": 2022
+          }
         ]
       }
     },
@@ -559,29 +628,11 @@
       "data": {
         "source": "822",
         "target": "847",
-        "ctor": "Mercedes",
-        "years": [
-          2020
-        ]
-      }
-    },
-    {
-      "data": {
-        "source": "849",
-        "target": "851",
-        "ctor": "Williams",
-        "years": [
-          2020
-        ]
-      }
-    },
-    {
-      "data": {
-        "source": "825",
-        "target": "850",
-        "ctor": "Haas F1 Team",
-        "years": [
-          2020
+        "ctor_year": [
+          {
+            "ctor": "Mercedes",
+            "year": 2020
+          }
         ]
       }
     },
@@ -589,10 +640,15 @@
       "data": {
         "source": "817",
         "target": "846",
-        "ctor": "McLaren",
-        "years": [
-          2021,
-          2022
+        "ctor_year": [
+          {
+            "ctor": "McLaren",
+            "year": 2021
+          },
+          {
+            "ctor": "McLaren",
+            "year": 2022
+          }
         ]
       }
     },
@@ -600,12 +656,23 @@
       "data": {
         "source": "832",
         "target": "844",
-        "ctor": "Ferrari",
-        "years": [
-          2021,
-          2022,
-          2023,
-          2024
+        "ctor_year": [
+          {
+            "ctor": "Ferrari",
+            "year": 2021
+          },
+          {
+            "ctor": "Ferrari",
+            "year": 2022
+          },
+          {
+            "ctor": "Ferrari",
+            "year": 2023
+          },
+          {
+            "ctor": "Ferrari",
+            "year": 2024
+          }
         ]
       }
     },
@@ -613,22 +680,23 @@
       "data": {
         "source": "815",
         "target": "830",
-        "ctor": "Red Bull",
-        "years": [
-          2021,
-          2022,
-          2023,
-          2024
-        ]
-      }
-    },
-    {
-      "data": {
-        "source": "853",
-        "target": "854",
-        "ctor": "Haas F1 Team",
-        "years": [
-          2021
+        "ctor_year": [
+          {
+            "ctor": "Red Bull",
+            "year": 2021
+          },
+          {
+            "ctor": "Red Bull",
+            "year": 2022
+          },
+          {
+            "ctor": "Red Bull",
+            "year": 2023
+          },
+          {
+            "ctor": "Red Bull",
+            "year": 2024
+          }
         ]
       }
     },
@@ -636,21 +704,15 @@
       "data": {
         "source": "842",
         "target": "852",
-        "ctor": "AlphaTauri",
-        "years": [
-          2021,
-          2022
-        ]
-      }
-    },
-    {
-      "data": {
-        "source": "20",
-        "target": "840",
-        "ctor": "Aston Martin",
-        "years": [
-          2021,
-          2022
+        "ctor_year": [
+          {
+            "ctor": "AlphaTauri",
+            "year": 2021
+          },
+          {
+            "ctor": "AlphaTauri",
+            "year": 2022
+          }
         ]
       }
     },
@@ -658,10 +720,15 @@
       "data": {
         "source": "4",
         "target": "839",
-        "ctor": "Alpine F1 Team",
-        "years": [
-          2021,
-          2022
+        "ctor_year": [
+          {
+            "ctor": "Alpine F1 Team",
+            "year": 2021
+          },
+          {
+            "ctor": "Alpine F1 Team",
+            "year": 2022
+          }
         ]
       }
     },
@@ -669,31 +736,19 @@
       "data": {
         "source": "1",
         "target": "847",
-        "ctor": "Mercedes",
-        "years": [
-          2022,
-          2023,
-          2024
-        ]
-      }
-    },
-    {
-      "data": {
-        "source": "848",
-        "target": "849",
-        "ctor": "Williams",
-        "years": [
-          2022
-        ]
-      }
-    },
-    {
-      "data": {
-        "source": "825",
-        "target": "854",
-        "ctor": "Haas F1 Team",
-        "years": [
-          2022
+        "ctor_year": [
+          {
+            "ctor": "Mercedes",
+            "year": 2022
+          },
+          {
+            "ctor": "Mercedes",
+            "year": 2023
+          },
+          {
+            "ctor": "Mercedes",
+            "year": 2024
+          }
         ]
       }
     },
@@ -701,40 +756,19 @@
       "data": {
         "source": "822",
         "target": "855",
-        "ctor": "Alfa Romeo",
-        "years": [
-          2022,
-          2023
-        ]
-      }
-    },
-    {
-      "data": {
-        "source": "807",
-        "target": "840",
-        "ctor": "Aston Martin",
-        "years": [
-          2022
-        ]
-      }
-    },
-    {
-      "data": {
-        "source": "9",
-        "target": "841",
-        "ctor": "Alfa Romeo",
-        "years": [
-          2021
-        ]
-      }
-    },
-    {
-      "data": {
-        "source": "849",
-        "target": "856",
-        "ctor": "Williams",
-        "years": [
-          2022
+        "ctor_year": [
+          {
+            "ctor": "Alfa Romeo",
+            "year": 2022
+          },
+          {
+            "ctor": "Alfa Romeo",
+            "year": 2023
+          },
+          {
+            "ctor": "Sauber",
+            "year": 2024
+          }
         ]
       }
     },
@@ -742,10 +776,15 @@
       "data": {
         "source": "846",
         "target": "857",
-        "ctor": "McLaren",
-        "years": [
-          2023,
-          2024
+        "ctor_year": [
+          {
+            "ctor": "McLaren",
+            "year": 2023
+          },
+          {
+            "ctor": "McLaren",
+            "year": 2024
+          }
         ]
       }
     },
@@ -753,10 +792,15 @@
       "data": {
         "source": "848",
         "target": "858",
-        "ctor": "Williams",
-        "years": [
-          2023,
-          2024
+        "ctor_year": [
+          {
+            "ctor": "Williams",
+            "year": 2023
+          },
+          {
+            "ctor": "Williams",
+            "year": 2024
+          }
         ]
       }
     },
@@ -764,10 +808,15 @@
       "data": {
         "source": "807",
         "target": "825",
-        "ctor": "Haas F1 Team",
-        "years": [
-          2023,
-          2024
+        "ctor_year": [
+          {
+            "ctor": "Haas F1 Team",
+            "year": 2023
+          },
+          {
+            "ctor": "Haas F1 Team",
+            "year": 2024
+          }
         ]
       }
     },
@@ -775,10 +824,15 @@
       "data": {
         "source": "4",
         "target": "840",
-        "ctor": "Aston Martin",
-        "years": [
-          2023,
-          2024
+        "ctor_year": [
+          {
+            "ctor": "Aston Martin",
+            "year": 2023
+          },
+          {
+            "ctor": "Aston Martin",
+            "year": 2024
+          }
         ]
       }
     },
@@ -786,20 +840,15 @@
       "data": {
         "source": "839",
         "target": "842",
-        "ctor": "Alpine F1 Team",
-        "years": [
-          2023,
-          2024
-        ]
-      }
-    },
-    {
-      "data": {
-        "source": "852",
-        "target": "856",
-        "ctor": "AlphaTauri",
-        "years": [
-          2023
+        "ctor_year": [
+          {
+            "ctor": "Alpine F1 Team",
+            "year": 2023
+          },
+          {
+            "ctor": "Alpine F1 Team",
+            "year": 2024
+          }
         ]
       }
     },
@@ -807,9 +856,15 @@
       "data": {
         "source": "817",
         "target": "852",
-        "ctor": "AlphaTauri",
-        "years": [
-          2023
+        "ctor_year": [
+          {
+            "ctor": "AlphaTauri",
+            "year": 2023
+          },
+          {
+            "ctor": "RB F1 Team",
+            "year": 2024
+          }
         ]
       }
     },
@@ -817,29 +872,15 @@
       "data": {
         "source": "852",
         "target": "859",
-        "ctor": "AlphaTauri",
-        "years": [
-          2023
-        ]
-      }
-    },
-    {
-      "data": {
-        "source": "822",
-        "target": "855",
-        "ctor": "Sauber",
-        "years": [
-          2024
-        ]
-      }
-    },
-    {
-      "data": {
-        "source": "817",
-        "target": "852",
-        "ctor": "RB F1 Team",
-        "years": [
-          2024
+        "ctor_year": [
+          {
+            "ctor": "AlphaTauri",
+            "year": 2023
+          },
+          {
+            "ctor": "RB F1 Team",
+            "year": 2024
+          }
         ]
       }
     },
@@ -847,9 +888,11 @@
       "data": {
         "source": "844",
         "target": "860",
-        "ctor": "Ferrari",
-        "years": [
-          2024
+        "ctor_year": [
+          {
+            "ctor": "Ferrari",
+            "year": 2024
+          }
         ]
       }
     },
@@ -857,9 +900,11 @@
       "data": {
         "source": "848",
         "target": "861",
-        "ctor": "Williams",
-        "years": [
-          2024
+        "ctor_year": [
+          {
+            "ctor": "Williams",
+            "year": 2024
+          }
         ]
       }
     },
@@ -867,19 +912,11 @@
       "data": {
         "source": "807",
         "target": "860",
-        "ctor": "Haas F1 Team",
-        "years": [
-          2024
-        ]
-      }
-    },
-    {
-      "data": {
-        "source": "852",
-        "target": "859",
-        "ctor": "RB F1 Team",
-        "years": [
-          2024
+        "ctor_year": [
+          {
+            "ctor": "Haas F1 Team",
+            "year": 2024
+          }
         ]
       }
     },
@@ -887,9 +924,11 @@
       "data": {
         "source": "842",
         "target": "862",
-        "ctor": "Alpine F1 Team",
-        "years": [
-          2024
+        "ctor_year": [
+          {
+            "ctor": "Alpine F1 Team",
+            "year": 2024
+          }
         ]
       }
     }

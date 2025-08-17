@@ -22,9 +22,8 @@ class MyBaseModel(BaseModel):
 class DriverPair:
     driver_id_1: int # driverId1 < driverId2
     driver_id_2: int
-    ctor_id: int
-    years: set[int] = field(default_factory=set) # years the drivers appear in at least one result together
-    raceIds: set[int] = field(default_factory=set)
+    race_ids: set[int] = field(default_factory=set)
+    years_by_ctor: dict[int, set[int]] = field(default_factory=dict) # mapping from ctor_id to list of years drivers drove together for that ctor
 
 class Driver(MyBaseModel):
     driver_id: int
@@ -37,7 +36,7 @@ class Driver(MyBaseModel):
     nationality: str
     years_active: set[int] = Field(default_factory=set) # years that driver appears in at least one result
     teammates: set[int] = Field(default_factory=set) # list of teammates by driverId
-    driver_pairs: set[tuple[int, int, int]] = Field(default_factory=set)
+    driver_pairs: set[tuple[int, int]] = Field(default_factory=set)
     def __str__(self):
         return f"{self.forename} {self.surname}"
     # maybe make teamate list (driverId, constructorId)

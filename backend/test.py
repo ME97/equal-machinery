@@ -9,7 +9,7 @@ driver_by_id: dict[int, Driver] = dict()
 race_by_id: dict[int, Race] = dict()
 ctor_by_id: dict[int, Ctor] = dict()
 result_by_id: dict[int, Result] = dict()
-driver_pair_by_id: dict[tuple[int, int, int], DriverPair] = dict()
+driver_pair_by_id: dict[tuple[int, int], DriverPair] = dict()
 # returns dictionary with key as driver_id, val as Driver object
 
 
@@ -69,61 +69,80 @@ def populate_driver_pairings(race_by_id: dict[int, Race],
                              result_by_id: dict[int, Result],
                              driver_by_id: dict[int, Driver],
                              ctor_by_id: dict[int, Ctor],
-                             ) -> dict[tuple[int, int, int], DriverPair]:
-    driver_pair_by_id: dict[tuple[int, int, int], DriverPair] = dict()
+                             ) -> dict[tuple[int, int], DriverPair]:
+    driver_pair_by_id: dict[tuple[int, int], DriverPair] = dict()
 
     for race in race_by_id.values():
-        for ctorId in race.ctors:
+        for ctor_id in race.ctors:
             pair: list[int, int] = list()
             for result_id in race.results:
                 result: Result = result_by_id[result_id]
-                if result.constructor_id == ctorId:
+                if result.constructor_id == ctor_id:
                     pair.append(result.driver_id)
 
             # temporary fix for if only one driver
+            # TODO: Change this to add drivers that didn't race with teammates
             if len(pair) != 2:
                 continue
 
             # smaller driver_id goes first, to avoid duplicates
             driver_id1 = min(pair)
             driver_id2 = max(pair)
-            driver_pair_id = driver_id1, driver_id2, ctorId
+            driver_pair_id = driver_id1, driver_id2
 
-            if driver_pair_id not in driver_pair_by_id:
-                driver_pair_by_id[driver_pair_id] = DriverPair(
-                    driver_id1, driver_id2, ctorId)
+            # if driver_pair_id not in driver_pair_by_id:
+            #     driver_pair_by_id[driver_pair_id] = DriverPair(
+            #         driver_id1, driver_id2)
 
-            driver_pair: DriverPair = driver_pair_by_id[driver_pair_id]
+            # driver_pair: DriverPair = driver_pair_by_id[driver_pair_id]
+
+            driver_pair: DriverPair = driver_pair_by_id.setdefault(
+                driver_pair_id, DriverPair(*driver_pair_id))
+
+            # add current race info to pair
+            driver_pair.race_ids.add(race.race_id)
+            driver_pair.years_by_ctor.setdefault(
+                ctor_id, set()).add(race.date.year)
+
+            # link pair to drivers and ctor
             driver_by_id[driver_id1].driver_pairs.add(driver_pair_id)
             driver_by_id[driver_id2].driver_pairs.add(driver_pair_id)
-            ctor_by_id[ctorId].driver_pair_ids.add(driver_pair_id)
-
-            driver_pair.raceIds.add(race.race_id)
-            driver_pair.years.add(race.date.year)
+            ctor_by_id[ctor_id].driver_pair_ids.add(driver_pair_id)
 
     return driver_pair_by_id
 
 
 def to_cytoscape_data(driver_by_id: dict[int, Driver],
                       ctor_by_id: dict[int, Ctor],
-                      driver_pair_by_id: dict[int, DriverPair],
+                      driver_pair_by_id: dict[tuple[int, int], DriverPair],
                       min_year: int = 0, max_year: int = 9999) -> None:
-    seen = set()
+    seen = set()  # used to only add edges with both drivers in year range
     nodes = []
+    year_range: set[int] = set([i for i in range(min_year, max_year + 1)])
+
     for id in driver_by_id:
-        year_range: set[int] = set([i for i in range(min_year, max_year + 1)])
-        # if min_year < min(driver_by_id[id].years_active) and max(driver_by_id[id].years_active) < max_year:
         if driver_by_id[id].years_active & year_range:
             nodes.append(
-                {"data": {"id": str(id), "name": str(driver_by_id[id]), 
+                {"data": {"id": str(id), "name": str(driver_by_id[id]),
                           "years_active": sorted(list(driver_by_id[id].years_active))}})
             seen.add(id)
 
     # TODO: What happens if teammates are together on different teams?
+    # edges = [
+    #     {"data": {"source": str(driver_id_1), "target": str(
+    #         driver_id_2), "ctor": ctor_by_id[ctor_id].name, "years": sorted(list(driver_pair_by_id[driver_id_1, driver_id_2, ctor_id].years))}}
+    #     for driver_id_1, driver_id_2, ctor_id in driver_pair_by_id if (driver_id_1 in seen and driver_id_2 in seen)
+    # ]
     edges = [
-        {"data": {"source": str(driver_id_1), "target": str(
-            driver_id_2), "ctor": ctor_by_id[ctor_id].name, "years": sorted(list(driver_pair_by_id[driver_id_1, driver_id_2, ctor_id].years))}}
-        for driver_id_1, driver_id_2, ctor_id in driver_pair_by_id if (driver_id_1 in seen and driver_id_2 in seen)
+        {"data": {"source": str(driver_pair.driver_id_1),
+                  "target": str(driver_pair.driver_id_2),
+                  "ctor_year": sorted([
+            {"ctor": ctor_by_id[ctor_id].name, "year": year}
+            for ctor_id, years in driver_pair.years_by_ctor.items()
+            for year in years
+        ],key=lambda pair: pair["year"])}}
+        for driver_pair in driver_pair_by_id.values()
+        if driver_pair.driver_id_1 in seen and driver_pair.driver_id_2 in seen
     ]
     return {"nodes": nodes, "edges": edges}
 
@@ -137,8 +156,8 @@ process_results(race_by_id, result_by_id, driver_by_id)
 driver_pair_by_id = populate_driver_pairings(
     race_by_id, result_by_id, driver_by_id, ctor_by_id)
 
-# print(json.dumps(to_cytoscape_data(driver_by_id,
-#       ctor_by_id, driver_pair_by_id, 2019, 2025)))
+print(json.dumps(to_cytoscape_data(driver_by_id,
+      ctor_by_id, driver_pair_by_id, 2024, 2024)))
 
 app = FastAPI()
 

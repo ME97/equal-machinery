@@ -11,22 +11,31 @@ type NodeData = {
   data: {
     id: string;
     name?: string;
-    years_active: Array<Number>
+    years_active: number[]
     [key: string]: any;
   };
+};
+
+type EdgeYearInfo = {
+  ctor: string
+  year: number;
 };
 
 type EdgeData = {
   data: {
     source: string;
     target: string;
-    ctor: string; // TODO: some driver pairs have multiple ctors (like zhou and bottas at alfa romeo / sauber)
-                  //  - need a way to identify which ctor corresponds to which years
-                  //  - e.g bottas and zhou were teammates at alfa romeo (2022-2023) and sauber (2024)
-                  // Plan:
-                  //    - change ctor to ctors [array of strings], one per ctor shared by drivers
-                  //    - change years to array of tuples (ctor, year)
-    years: number[];
+    // ctor: string; // TODO: some driver pairs have multiple ctors (like zhou and bottas at alfa romeo / sauber)
+    //               //  - need a way to identify which ctor corresponds to which years
+    //               //  - e.g bottas and zhou were teammates at alfa romeo (2022-2023) and sauber (2024)
+    //               // Plan:
+    //               //    - change ctor to ctors [array of strings], one per ctor shared by drivers
+    //               //    - change years to array of tuples (ctor, year)
+    // years: number[];
+
+    // TODO: looks for occurences of ctor and year and replace accorudingly
+    //    OR we could keep that info?
+    ctor_year: EdgeYearInfo[]; // sorted by year
     [key: string]: any;
   };
 };
@@ -50,6 +59,30 @@ export default function DriverGraph() {
   useEffect(() => {
     if (cyRef.current && elements.length > 0) {
       const cy = cyRef.current;
+
+      // set up edge labels TODO: maybe move this to it's own hook
+      //  - it will be triggered on target year change
+      //  - display most recent ctor that is in year range
+      //    - (or if none are in range, just most recent)
+      const min_year = 2024; // dummy vars for testing
+      const max_year = 2024;
+      cy.edges().forEach((edge) => {
+        const ctor_year: EdgeYearInfo[] = edge.data("ctor_year");
+        const filteredYears: EdgeYearInfo[] = ctor_year.filter(
+          (y: EdgeYearInfo) => y.year >= min_year && y.year <= max_year
+        );
+
+        let label: string | undefined;
+
+        if (filteredYears.length !== 0) {
+          label = filteredYears.at(-1)!.ctor;
+        } else if (ctor_year.length !== 0) {
+          label = ctor_year.at(-1)!.ctor;
+        } else {
+          label = undefined;
+        }
+        edge.data("label", label ? label : "");
+      });
 
       // Right now this is not being used, because we just do a cose-bilkent layout after
       //  But the idea is to arrange nodes chronologically
@@ -212,7 +245,8 @@ export default function DriverGraph() {
         parts.push(ele.data("name"));
       }
       if (ele.isEdge()) {
-        parts.push(ele.data("ctor"));
+        // TODO: update this to be correct for the given year (maybe this is already handled with how label is set)
+        parts.push(ele.data("label"));
       }
     }
     const pathString = parts.join(' -> ');
@@ -306,9 +340,9 @@ export default function DriverGraph() {
               const edge = event.target;
               const source = edge.source().data("name") || edge.source().id();
               const target = edge.target().data("name") || edge.target().id();
-              const team = edge.data("ctor") || "Unknown Team";
+              const team = edge.data("label") || "Unknown Team";
               console.log(edge.data())
-              const years = edge.data("years").join(", ")
+              const years = edge.data.map((ctor_year: EdgeYearInfo) => ctor_year.year).join(", ")
 
               setSelectedInfo(`${source} & ${target} were teammates at ${team} during ${years}`);
             });
