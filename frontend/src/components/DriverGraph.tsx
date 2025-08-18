@@ -11,31 +11,26 @@ type NodeData = {
   data: {
     id: string;
     name?: string;
-    years_active: number[]
+    codename:string;
+    forename: string;
+    surname: string;
+    years_active: number[];
     [key: string]: any;
   };
 };
 
 type EdgeYearInfo = {
   ctor: string
-  year: number;
+  year: number; // TODO: Change this to be array of years
 };
 
 type EdgeData = {
   data: {
     source: string;
     target: string;
-    // ctor: string; // TODO: some driver pairs have multiple ctors (like zhou and bottas at alfa romeo / sauber)
-    //               //  - need a way to identify which ctor corresponds to which years
-    //               //  - e.g bottas and zhou were teammates at alfa romeo (2022-2023) and sauber (2024)
-    //               // Plan:
-    //               //    - change ctor to ctors [array of strings], one per ctor shared by drivers
-    //               //    - change years to array of tuples (ctor, year)
-    // years: number[];
-
-    // TODO: looks for occurences of ctor and year and replace accorudingly
-    //    OR we could keep that info?
-    ctor_year: EdgeYearInfo[]; // sorted by year
+    ctor_year: EdgeYearInfo[]; // This can be map from ctor to array of years
+                               // Then, easy to display what years pair was on which team
+                               // Also, to check which team to display, just iterate over each and check if years in range
     [key: string]: any;
   };
 };
@@ -64,7 +59,7 @@ export default function DriverGraph() {
       //  - it will be triggered on target year change
       //  - display most recent ctor that is in year range
       //    - (or if none are in range, just most recent)
-      const min_year = 2024; // dummy vars for testing
+      const min_year = 2022; // dummy vars for testing
       const max_year = 2024;
       cy.edges().forEach((edge) => {
         const ctor_year: EdgeYearInfo[] = edge.data("ctor_year");
@@ -192,11 +187,7 @@ export default function DriverGraph() {
         .selector('node')
         .style({
           shape: 'ellipse',
-          label: (ele: NodeSingular) => {
-            const [first, last] = ele.data('name').split(' ');
-            return last.slice(0, 3); // TODO: change this to actual 3 letter code
-            // return `${first}\n${last}`;
-          },
+          label: "data(codename)",
           'text-valign': 'center',
           'text-halign': 'center',
           'font-size': 14,
@@ -282,11 +273,7 @@ export default function DriverGraph() {
             style: {
               // label: "data(name)",
               "background-color": "#0074D9",
-              label: (ele: NodeSingular) => {
-                const [first, last] = ele.data('name').split(' ');
-                return last.slice(0, 3);
-                // return `${first}\n${last}`;
-              },
+              label: "data(codename)",
               color: "#fff",
               "text-valign": "center",
               "text-halign": "center",
@@ -306,7 +293,7 @@ export default function DriverGraph() {
               width: 10,
               "line-color": "#aaa",
               "target-arrow-color": "#aaa",
-              label: "data(ctor)",
+              label: "data(label)",
               "font-size": 12,
               "text-rotation": "autorotate"
             },
@@ -342,9 +329,39 @@ export default function DriverGraph() {
               const target = edge.target().data("name") || edge.target().id();
               const team = edge.data("label") || "Unknown Team";
               console.log(edge.data())
-              const years = edge.data.map((ctor_year: EdgeYearInfo) => ctor_year.year).join(", ")
+              const years = edge.data("ctor_year").map((ctor_year: EdgeYearInfo) => ctor_year.year).join(", ")
 
-              setSelectedInfo(`${source} & ${target} were teammates at ${team} during ${years}`);
+
+              const min_year = 2022; // dummy vars for testing
+              const max_year = 2024;
+              const ctor_year: EdgeYearInfo[] = edge.data("ctor_year");
+              const filteredYears: EdgeYearInfo[] = ctor_year.filter(
+                (y: EdgeYearInfo) => y.year >= min_year && y.year <= max_year
+              );
+              const grouped = filteredYears.reduce<Record<string, number[]>>((acc, obj) => {
+                if (!acc[obj.ctor]) {
+                  acc[obj.ctor] = [];
+                }
+                acc[obj.ctor].push(obj.year);
+                return acc;
+              }, {});
+              const arr = Object.entries(grouped).map(([ctor, years]) => ({
+                ctor,
+                years
+              }));
+
+              let label: string;
+
+              if (arr.length !== 0) {
+                label = arr.map(pair => `${pair.ctor}[${pair.years.join(", ")}]`).join(", ");
+              } else if (ctor_year.length !== 0) {
+                label = `${team}[${years}]`;
+              } else {
+                label = "ERROR: Teams not found";
+              }
+
+              // setSelectedInfo(`${source} & ${target} were teammates at ${team} during ${years}`);
+              setSelectedInfo(`${source} & ${target} were teammates at ${label}`);
             });
 
             cy.on("tap", (event) => {
@@ -383,7 +400,8 @@ export default function DriverGraph() {
               }
             });
           }
-        }}
+        }
+        }
       />
       {selectedInfo && (
         <div style={{ padding: "1rem", background: "#f4f4f4", textAlign: "center" }}>

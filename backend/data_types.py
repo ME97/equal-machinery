@@ -29,7 +29,7 @@ class Driver(MyBaseModel):
     driver_id: int
     driver_ref: str
     number: Optional[int]
-    code: str
+    codename: str = Field(alias="code")
     forename: str
     surname: str
     dob: date

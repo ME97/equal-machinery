@@ -10,17 +10,12 @@ race_by_id: dict[int, Race] = dict()
 ctor_by_id: dict[int, Ctor] = dict()
 result_by_id: dict[int, Result] = dict()
 driver_pair_by_id: dict[tuple[int, int], DriverPair] = dict()
-# returns dictionary with key as driver_id, val as Driver object
-
 
 def load_drivers(file_path: str) -> dict[int, Driver]:
     with open(file_path, newline='', encoding='utf-8') as f:
         reader = csv.DictReader(f)
         map = {}
         for row in reader:
-            # y = date.fromisoformat(row['dob']).year
-            # if y < 1970:
-            #     continue
             if row['number'] == r'\N':
                 row['number'] = None
             map[int(row['driverId'])] = (Driver(**row))
@@ -90,12 +85,6 @@ def populate_driver_pairings(race_by_id: dict[int, Race],
             driver_id2 = max(pair)
             driver_pair_id = driver_id1, driver_id2
 
-            # if driver_pair_id not in driver_pair_by_id:
-            #     driver_pair_by_id[driver_pair_id] = DriverPair(
-            #         driver_id1, driver_id2)
-
-            # driver_pair: DriverPair = driver_pair_by_id[driver_pair_id]
-
             driver_pair: DriverPair = driver_pair_by_id.setdefault(
                 driver_pair_id, DriverPair(*driver_pair_id))
 
@@ -121,18 +110,17 @@ def to_cytoscape_data(driver_by_id: dict[int, Driver],
     year_range: set[int] = set([i for i in range(min_year, max_year + 1)])
 
     for id in driver_by_id:
-        if driver_by_id[id].years_active & year_range:
+        driver: Driver = driver_by_id[id]
+        if driver.years_active & year_range:
             nodes.append(
-                {"data": {"id": str(id), "name": str(driver_by_id[id]),
-                          "years_active": sorted(list(driver_by_id[id].years_active))}})
+                {"data": {"id": str(id), 
+                          "name": str(driver),
+                          "codename": driver.codename,
+                          "forename": driver.forename,
+                          "surname": driver.surname,
+                          "years_active": sorted(list(driver.years_active))}})
             seen.add(id)
 
-    # TODO: What happens if teammates are together on different teams?
-    # edges = [
-    #     {"data": {"source": str(driver_id_1), "target": str(
-    #         driver_id_2), "ctor": ctor_by_id[ctor_id].name, "years": sorted(list(driver_pair_by_id[driver_id_1, driver_id_2, ctor_id].years))}}
-    #     for driver_id_1, driver_id_2, ctor_id in driver_pair_by_id if (driver_id_1 in seen and driver_id_2 in seen)
-    # ]
     edges = [
         {"data": {"source": str(driver_pair.driver_id_1),
                   "target": str(driver_pair.driver_id_2),
@@ -156,8 +144,6 @@ process_results(race_by_id, result_by_id, driver_by_id)
 driver_pair_by_id = populate_driver_pairings(
     race_by_id, result_by_id, driver_by_id, ctor_by_id)
 
-print(json.dumps(to_cytoscape_data(driver_by_id,
-      ctor_by_id, driver_pair_by_id, 2024, 2024)))
 
 app = FastAPI()
 
