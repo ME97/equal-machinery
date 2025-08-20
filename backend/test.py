@@ -2,8 +2,7 @@ import csv
 import json
 from datetime import date
 from data_types import Driver, Race, Ctor, Result, DriverPair
-from fastapi import FastAPI
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI # type: ignore TODO: figure out why this import is getting flagged
 
 driver_by_id: dict[int, Driver] = dict()
 race_by_id: dict[int, Race] = dict()
@@ -95,7 +94,13 @@ def populate_driver_pairings(race_by_id: dict[int, Race],
 
             # link pair to drivers and ctor
             driver_by_id[driver_id1].driver_pairs.add(driver_pair_id)
+            driver_by_id[driver_id1].years_by_ctor.setdefault(
+                ctor_id, set()).add(race.date.year)
+
             driver_by_id[driver_id2].driver_pairs.add(driver_pair_id)
+            driver_by_id[driver_id2].years_by_ctor.setdefault(
+                ctor_id, set()).add(race.date.year)
+
             ctor_by_id[ctor_id].driver_pair_ids.add(driver_pair_id)
 
     return driver_pair_by_id
@@ -111,6 +116,15 @@ def to_cytoscape_data(driver_by_id: dict[int, Driver],
 
     for id in driver_by_id:
         driver: Driver = driver_by_id[id]
+        flat = [(ctor_id, years) for ctor_id, years in driver.years_by_ctor.items()]
+        print(driver)
+        print(flat)
+        # TODO: Problem is that drivers who didn't have any teammates don't have this list
+        #       - right now we are populating driver.years_by_ctor in populate_driver_pairings
+        #           - need to add special case for when pair isn't found
+        # also we should probably compute this in the frontend, because it will depend on year range
+        # 
+        displayCtor = max(flat, key=lambda pair: (len(pair[1]), max(pair[1])))
         if driver.years_active & year_range:
             nodes.append(
                 {"data": {"id": str(id), 
@@ -118,17 +132,23 @@ def to_cytoscape_data(driver_by_id: dict[int, Driver],
                           "codename": driver.codename,
                           "forename": driver.forename,
                           "surname": driver.surname,
-                          "years_active": sorted(list(driver.years_active))}})
+                          "years_active": sorted(list(driver.years_active)),
+                          "yearsByCtor": sorted([
+                            {"ctor": ctor_by_id[ctor_id].name, "years": sorted(years)}
+                            for ctor_id, years in driver.years_by_ctor.items()
+                        ],key=lambda pair: max(pair["years"])),
+                        "displayCtor": displayCtor,
+                        
+                          }}),
             seen.add(id)
 
     edges = [
         {"data": {"source": str(driver_pair.driver_id_1),
                   "target": str(driver_pair.driver_id_2),
-                  "ctor_year": sorted([
-            {"ctor": ctor_by_id[ctor_id].name, "year": year}
+                  "yearsByCtor": sorted([
+            {"ctor": ctor_by_id[ctor_id].name, "years": sorted(years)}
             for ctor_id, years in driver_pair.years_by_ctor.items()
-            for year in years
-        ],key=lambda pair: pair["year"])}}
+        ],key=lambda pair: max(pair["years"]))}}
         for driver_pair in driver_pair_by_id.values()
         if driver_pair.driver_id_1 in seen and driver_pair.driver_id_2 in seen
     ]
@@ -144,10 +164,12 @@ process_results(race_by_id, result_by_id, driver_by_id)
 driver_pair_by_id = populate_driver_pairings(
     race_by_id, result_by_id, driver_by_id, ctor_by_id)
 
+with open("dump.json", 'w') as f:
+    f.write(json.dumps(to_cytoscape_data(driver_by_id, ctor_by_id, driver_pair_by_id, 2000, 2024)))
 
 app = FastAPI()
 
 
 @app.get("/graph")
 def get_graph():
-    return to_cytoscape_data(driver_by_id, ctor_by_id, driver_pair_by_id, 2024, 2024)
+    return to_cytoscape_data(driver_by_id, ctor_by_id, driver_pair_by_id, 2000, 2024)

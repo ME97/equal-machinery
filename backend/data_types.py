@@ -1,4 +1,4 @@
-from pydantic import BaseModel, field_validator, Field, ConfigDict
+from pydantic import BaseModel, field_validator, Field, ConfigDict, ValidationInfo
 from typing import Optional
 from datetime import date
 from dataclasses import dataclass, field
@@ -29,18 +29,23 @@ class Driver(MyBaseModel):
     driver_id: int
     driver_ref: str
     number: Optional[int]
-    codename: str = Field(alias="code")
     forename: str
     surname: str
+    codename: str = Field(alias="code")
     dob: date
     nationality: str
     years_active: set[int] = Field(default_factory=set) # years that driver appears in at least one result
+    years_by_ctor: dict[int, set[int]] = field(default_factory=dict) # mapping from ctor_id to list of years drivers drove together for that ctor
     teammates: set[int] = Field(default_factory=set) # list of teammates by driverId
     driver_pairs: set[tuple[int, int]] = Field(default_factory=set)
+    @field_validator("codename", mode="before")
+    def handle_null(cls, v, info: ValidationInfo):
+        if v == r"\N":  # raw string match
+            v = info.data.get("surname", "ERROR").split(" ")
+            v = v[-1][:3].upper() # first 3 characters of last part of last name (e.g "de matta" -> MAT)
+        return v
     def __str__(self):
         return f"{self.forename} {self.surname}"
-    # maybe make teamate list (driverId, constructorId)
-    # teams (which teams they were on, and for which time periods)
 
 # TODO: Add more fields to this (grid pos, finish pos, points, etc)
 class Result(MyBaseModel):
@@ -80,6 +85,7 @@ class Ctor(MyBaseModel):
     name: str
     nationality: str
     driver_pair_ids: set[tuple[int, int, int]] = Field(default_factory=set)
+    colour: str | None
 
 
 
