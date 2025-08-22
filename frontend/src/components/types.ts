@@ -12,8 +12,8 @@ export type NodeData = {
     surname: string;
     yearsActive: number[]; // TODO: We waste a lot of space by having this AND yearsByCtor
     yearsByCtor: YearsByCtor[]; // TODO: We hold this info in nodes and edges
-    displayCtor: string; // ctor used for node colouring
-    primaryCtor?: string; // ctor that was raced for the most number of seasons, or most recent
+    displayCtor?: string; // ctor used for node colouring
+    raceCount?: number // number of races
     [key: string]: any;
   };
 };

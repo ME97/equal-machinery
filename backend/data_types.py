@@ -13,11 +13,6 @@ class MyBaseModel(BaseModel):
         populate_by_name=True
     )
 
-# TODO: Change this so that all ctors shared by driver are represnted 
-#        - no more ctor_id, key will be [id_1, id_2], (id_1 < id_2)
-#        - ctor is now list of ints
-#        - years is now list of (ctor, year) tuples
-#           - actually, maybe just a list of (ctor, year tuples, don't need the list of ints)
 @dataclass
 class DriverPair:
     driver_id_1: int # driverId1 < driverId2
@@ -35,9 +30,10 @@ class Driver(MyBaseModel):
     dob: date
     nationality: str
     years_active: set[int] = Field(default_factory=set) # years that driver appears in at least one result
-    years_by_ctor: dict[int, set[int]] = field(default_factory=dict) # mapping from ctor_id to list of years drivers drove together for that ctor
-    teammates: set[int] = Field(default_factory=set) # list of teammates by driverId
+    years_by_ctor: dict[int, set[int]] = Field(default_factory=dict) # mapping from ctor_id to list of years drivers drove together for that ctor
+    teammates: set[int] = Field(default_factory=set) # set of teammates by driverId
     driver_pairs: set[tuple[int, int]] = Field(default_factory=set)
+    race_ids: set[int] = Field(default_factory=set) # set of races driver has results in
     @field_validator("codename", mode="before")
     def handle_null(cls, v, info: ValidationInfo):
         if v == r"\N":  # raw string match

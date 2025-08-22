@@ -2,7 +2,7 @@ import csv
 import json
 from datetime import date
 from data_types import Driver, Race, Ctor, Result, DriverPair
-from fastapi import FastAPI # type: ignore TODO: figure out why this import is getting flagged
+from fastapi import FastAPI
 
 driver_by_id: dict[int, Driver] = dict()
 race_by_id: dict[int, Race] = dict()
@@ -10,60 +10,65 @@ ctor_by_id: dict[int, Ctor] = dict()
 result_by_id: dict[int, Result] = dict()
 driver_pair_by_id: dict[tuple[int, int], DriverPair] = dict()
 
+
 def load_drivers(file_path: str) -> dict[int, Driver]:
-    with open(file_path, newline='', encoding='utf-8') as f:
+    with open(file_path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         map = {}
         for row in reader:
-            if row['number'] == r'\N':
-                row['number'] = None
-            map[int(row['driverId'])] = (Driver(**row))
+            if row["number"] == r"\N":
+                row["number"] = None
+            map[int(row["driverId"])] = Driver(**row)
         return map
 
 
 def load_results(file_path: str) -> dict[int, Result]:
     map = {}
-    with open(file_path, newline='', encoding='utf-8') as f:
+    with open(file_path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            map[int(row['resultId'])] = Result(**row)
+            map[int(row["resultId"])] = Result(**row)
     return map
 
 
 def load_races(file_path: str) -> dict[int, Race]:
     map = {}
-    with open(file_path, newline='', encoding='utf-8') as f:
+    with open(file_path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            map[int(row['raceId'])] = Race(**row)
+            map[int(row["raceId"])] = Race(**row)
     return map
 
 
 def load_ctors(file_path: str) -> dict[int, Ctor]:
     map = {}
-    with open(file_path, newline='', encoding='utf-8') as f:
+    with open(file_path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            map[int(row['constructorId'])] = Ctor(**row)
+            map[int(row["constructorId"])] = Ctor(**row)
     return map
 
 
-def process_results(race_by_id: dict[int, Race],
-                    result_by_id: dict[int, Result],
-                    driver_by_id: dict[int, Driver]):
+def process_results(
+    race_by_id: dict[int, Race],
+    result_by_id: dict[int, Result],
+    driver_by_id: dict[int, Driver],
+):
     for result in result_by_id.values():
         race: Race = race_by_id[result.race_id]
         race.results.add(result.result_id)
         race.drivers.add(result.driver_id)
         race.ctors.add(result.constructor_id)
         driver_by_id[result.driver_id].years_active.add(race.date.year)
+        driver_by_id[result.driver_id].race_ids.add(race.race_id)
 
 
-def populate_driver_pairings(race_by_id: dict[int, Race],
-                             result_by_id: dict[int, Result],
-                             driver_by_id: dict[int, Driver],
-                             ctor_by_id: dict[int, Ctor],
-                             ) -> dict[tuple[int, int], DriverPair]:
+def populate_driver_pairings(
+    race_by_id: dict[int, Race],
+    result_by_id: dict[int, Result],
+    driver_by_id: dict[int, Driver],
+    ctor_by_id: dict[int, Ctor],
+) -> dict[tuple[int, int], DriverPair]:
     driver_pair_by_id: dict[tuple[int, int], DriverPair] = dict()
 
     for race in race_by_id.values():
@@ -77,6 +82,10 @@ def populate_driver_pairings(race_by_id: dict[int, Race],
             # temporary fix for if only one driver
             # TODO: Change this to add drivers that didn't race with teammates
             if len(pair) != 2:
+                driver_id = pair[0]
+                driver_by_id[driver_id].years_by_ctor.setdefault(ctor_id, set()).add(
+                    race.date.year
+                )
                 continue
 
             # smaller driver_id goes first, to avoid duplicates
@@ -85,87 +94,113 @@ def populate_driver_pairings(race_by_id: dict[int, Race],
             driver_pair_id = driver_id1, driver_id2
 
             driver_pair: DriverPair = driver_pair_by_id.setdefault(
-                driver_pair_id, DriverPair(*driver_pair_id))
+                driver_pair_id, DriverPair(*driver_pair_id)
+            )
 
             # add current race info to pair
             driver_pair.race_ids.add(race.race_id)
-            driver_pair.years_by_ctor.setdefault(
-                ctor_id, set()).add(race.date.year)
+            driver_pair.years_by_ctor.setdefault(ctor_id, set()).add(race.date.year)
 
             # link pair to drivers and ctor
             driver_by_id[driver_id1].driver_pairs.add(driver_pair_id)
-            driver_by_id[driver_id1].years_by_ctor.setdefault(
-                ctor_id, set()).add(race.date.year)
+            driver_by_id[driver_id1].years_by_ctor.setdefault(ctor_id, set()).add(
+                race.date.year
+            )
 
             driver_by_id[driver_id2].driver_pairs.add(driver_pair_id)
-            driver_by_id[driver_id2].years_by_ctor.setdefault(
-                ctor_id, set()).add(race.date.year)
+            driver_by_id[driver_id2].years_by_ctor.setdefault(ctor_id, set()).add(
+                race.date.year
+            )
 
             ctor_by_id[ctor_id].driver_pair_ids.add(driver_pair_id)
 
     return driver_pair_by_id
 
 
-def to_cytoscape_data(driver_by_id: dict[int, Driver],
-                      ctor_by_id: dict[int, Ctor],
-                      driver_pair_by_id: dict[tuple[int, int], DriverPair],
-                      min_year: int = 0, max_year: int = 9999) -> None:
+def to_cytoscape_data(
+    driver_by_id: dict[int, Driver],
+    ctor_by_id: dict[int, Ctor],
+    driver_pair_by_id: dict[tuple[int, int], DriverPair],
+    min_year: int = 0,
+    max_year: int = 9999,
+) -> None:
     seen = set()  # used to only add edges with both drivers in year range
     nodes = []
     year_range: set[int] = set([i for i in range(min_year, max_year + 1)])
 
     for id in driver_by_id:
         driver: Driver = driver_by_id[id]
-        flat = [(ctor_id, years) for ctor_id, years in driver.years_by_ctor.items()]
-        print(driver)
-        print(flat)
+        # flat = [(ctor_id, years) for ctor_id, years in driver.years_by_ctor.items()]
+        # print(driver)
+        # print(flat)
         # TODO: Problem is that drivers who didn't have any teammates don't have this list
         #       - right now we are populating driver.years_by_ctor in populate_driver_pairings
         #           - need to add special case for when pair isn't found
         # also we should probably compute this in the frontend, because it will depend on year range
-        # 
-        displayCtor = max(flat, key=lambda pair: (len(pair[1]), max(pair[1])))
+        #
+        # displayCtor = max(flat, key=lambda pair: (len(pair[1]), max(pair[1])))
         if driver.years_active & year_range:
             nodes.append(
-                {"data": {"id": str(id), 
-                          "name": str(driver),
-                          "codename": driver.codename,
-                          "forename": driver.forename,
-                          "surname": driver.surname,
-                          "years_active": sorted(list(driver.years_active)),
-                          "yearsByCtor": sorted([
-                            {"ctor": ctor_by_id[ctor_id].name, "years": sorted(years)}
-                            for ctor_id, years in driver.years_by_ctor.items()
-                        ],key=lambda pair: max(pair["years"])),
-                        "displayCtor": displayCtor,
-                        
-                          }}),
+                {
+                    "data": {
+                        "id": str(id),
+                        "name": str(driver),
+                        "codename": driver.codename,
+                        "forename": driver.forename,
+                        "surname": driver.surname,
+                        "years_active": sorted(list(driver.years_active)),
+                        "yearsByCtor": sorted(
+                            [
+                                {
+                                    "ctor": ctor_by_id[ctor_id].name,
+                                    "years": sorted(years),
+                                }
+                                for ctor_id, years in driver.years_by_ctor.items()
+                            ],
+                            key=lambda pair: min(pair["years"]),
+                        ),
+                        "raceCount": len(driver.race_ids),
+                    }
+                }
+            ),
             seen.add(id)
 
     edges = [
-        {"data": {"source": str(driver_pair.driver_id_1),
-                  "target": str(driver_pair.driver_id_2),
-                  "yearsByCtor": sorted([
-            {"ctor": ctor_by_id[ctor_id].name, "years": sorted(years)}
-            for ctor_id, years in driver_pair.years_by_ctor.items()
-        ],key=lambda pair: max(pair["years"]))}}
+        {
+            "data": {
+                "source": str(driver_pair.driver_id_1),
+                "target": str(driver_pair.driver_id_2),
+                "yearsByCtor": sorted(
+                    [
+                        {"ctor": ctor_by_id[ctor_id].name, "years": sorted(years)}
+                        for ctor_id, years in driver_pair.years_by_ctor.items()
+                    ],
+                    key=lambda pair: max(pair["years"]),
+                ),
+            }
+        }
         for driver_pair in driver_pair_by_id.values()
         if driver_pair.driver_id_1 in seen and driver_pair.driver_id_2 in seen
     ]
     return {"nodes": nodes, "edges": edges}
 
 
-driver_by_id = load_drivers('data/drivers.csv')
-ctor_by_id = load_ctors('data/constructors.csv')
-result_by_id = load_results('data/results.csv')
-race_by_id = load_races('data/races.csv')
+driver_by_id = load_drivers("data/drivers.csv")
+ctor_by_id = load_ctors("data/constructors.csv")
+result_by_id = load_results("data/results.csv")
+race_by_id = load_races("data/races.csv")
 process_results(race_by_id, result_by_id, driver_by_id)
 
 driver_pair_by_id = populate_driver_pairings(
-    race_by_id, result_by_id, driver_by_id, ctor_by_id)
+    race_by_id, result_by_id, driver_by_id, ctor_by_id
+)
 
-with open("dump.json", 'w') as f:
-    f.write(json.dumps(to_cytoscape_data(driver_by_id, ctor_by_id, driver_pair_by_id, 2000, 2024)))
+with open("dump.json", "w") as f:
+    f.write(
+        json.dumps(
+            to_cytoscape_data(driver_by_id, ctor_by_id, driver_pair_by_id, 2000, 2024)
+        )
+    )
 
 app = FastAPI()
 

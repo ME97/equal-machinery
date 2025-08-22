@@ -10,8 +10,9 @@ cytoscape.use(coseBilkent);
 
 // dummy vars for testing
 // TODO: Replace these user input
-const global_min_year = 2020;
+const global_min_year = 2000;
 const global_max_year = 2024;
+const global_min_races = 10; // minimum number of races needed to display node
 
 const ctorColors: Record<string, string> = {
   Ferrari: '#ff2800',
@@ -24,6 +25,8 @@ const ctorColors: Record<string, string> = {
   Sauber: '#01C00E',
   Williams: '#1868DB',
   McLaren: '#F47600',
+  Renault: '#FFF500',
+  'Force India': '#F596C8'
 };
 
 export default function DriverGraph() {
@@ -127,25 +130,26 @@ export default function DriverGraph() {
       const textHeight = fontSize * 1.25; // account for vertical padding
       const diameter = Math.max(textWidth, textHeight) + 30; // add padding
       cy.nodes().forEach((node) => {
-        const ctor: string = node.data('yearsByCtor').at(-1)!.ctor; // grab most recent ctor TODO: this should be based on year range
+        const ctor: string = getMostCommonCtor(
+          node.data('yearsByCtor'),
+          global_min_year,
+          global_max_year
+        );
         node.data('displayCtor', ctor);
         node.style({
           width: diameter,
           height: diameter,
         });
+        if (node.data('raceCount') < global_min_races) {
+          (node as any).hide(); // TODO: Figure out the typing for this (or just change display style to 'none' directly )
+          console.log(`hiding ${node.data('codename')}`);
+        }
       });
     }
   }, [elements]);
 
   // handle driver selection
   useEffect(() => {
-    // if one driverId
-    //   - highlight and display info
-    // if two
-    //   - shortest path from one to the other
-    // if three
-    //   - unhighlight everything, and just keep the last element? Which goes back around to case #1?
-
     const cy = cyRef.current;
     if (!cy) return;
     cy.elements().removeClass('highlighted faded');
@@ -162,9 +166,7 @@ export default function DriverGraph() {
         .data('yearsByCtor')
         .map((pair: YearsByCtor) => `${pair.ctor}[${pair.years.join(' ,')}]`)
         .join(', ');
-      setSelectedInfo(
-        `Selected: ${node.data('name')}, raced for ${label}`
-      );
+      setSelectedInfo(`Selected: ${node.data('name')}, raced for ${label}`);
     } else if (selectedDrivers.length === 2) {
       highlightShortestPathInBrowser(selectedDrivers[0], selectedDrivers[1]);
     } else if (selectedDrivers.length === 3) {
@@ -175,10 +177,12 @@ export default function DriverGraph() {
     }
   }, [selectedDrivers]);
 
-  const highlightShortestPathInBrowser = (
+  // compute shortest path between two drivers, and highlight nodes and edges on path
+  // TODO: What if there are multiple shortest paths of same length?
+  function highlightShortestPathInBrowser(
     sourceId: string,
     targetId: string
-  ) => {
+  ): void {
     const cy = cyRef.current;
     if (!cy) return;
 
@@ -224,7 +228,35 @@ export default function DriverGraph() {
     const pathString = parts.join(' -> ');
     console.log(pathString);
     setSelectedInfo(pathString);
-  };
+  }
+
+  // computes the ctor with the most years in [yearMin, yearMax].
+  //    - on tie, pick most recent
+  function getMostCommonCtor(
+    yearsByCtor: YearsByCtor[],
+    yearMin: number = 0,
+    yearMax: number = 9999
+  ): string {
+    let defaultCtor: string = 'DEFAULT_CTOR';
+    if (yearsByCtor.length !== 0) {
+      defaultCtor = yearsByCtor.at(-1)!.ctor;
+      let maxCount = yearsByCtor
+        .at(-1)!
+        .years.filter((year) => yearMin <= year && year <= yearMax).length;
+
+      for (let i = yearsByCtor.length - 2; i >= 0; --i) {
+        let count = yearsByCtor[i].years.filter(
+          (year) => yearMin <= year && year <= yearMax
+        ).length;
+        if (count > maxCount) {
+          maxCount = count;
+          defaultCtor = yearsByCtor[i].ctor;
+        }
+      }
+    }
+
+    return defaultCtor;
+  }
 
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -238,7 +270,7 @@ export default function DriverGraph() {
               'background-color': (ele: NodeSingular) =>
                 ctorColors[ele.data('displayCtor')] || '#0074D9',
               label: 'data(codename)',
-              color: '#fff',
+              color: '#969696ff',
               shape: 'ellipse',
               'text-valign': 'center',
               'text-halign': 'center',
