@@ -1,8 +1,8 @@
 // src/components/DriverGraph.tsx
 
 import { useEffect, useState, useRef } from 'react';
-import CytoscapeComponent from 'react-cytoscapejs';
 import cytoscape, { Core, EventObject, NodeSingular } from 'cytoscape';
+import CytoscapeComponent from 'react-cytoscapejs';
 import coseBilkent from 'cytoscape-cose-bilkent';
 import { NodeData, EdgeData, YearsByCtor } from './types';
 
@@ -10,7 +10,7 @@ cytoscape.use(coseBilkent);
 
 // dummy vars for testing
 // TODO: Replace these user input
-const global_min_year = 2000;
+const global_min_year = 2024;
 const global_max_year = 2024;
 const global_min_races = 10; // minimum number of races needed to display node
 
@@ -26,7 +26,7 @@ const ctorColors: Record<string, string> = {
   Williams: '#1868DB',
   McLaren: '#F47600',
   Renault: '#FFF500',
-  'Force India': '#F596C8'
+  'Force India': '#F596C8',
 };
 
 export default function DriverGraph() {
@@ -71,6 +71,13 @@ export default function DriverGraph() {
         edge.data('label', label ?? '');
       });
 
+      const length = 3;
+      const fontSize = 14;
+      const charWidth = fontSize * 0.6; // rough average
+      const textWidth = length * charWidth;
+      const textHeight = fontSize * 1.25; // account for vertical padding
+      const diameter = Math.max(textWidth, textHeight) + 30; // add padding
+
       // cose-bilkent default options
       const coseBilkentDefaultOptions = {
         quality: 'default',
@@ -83,23 +90,23 @@ export default function DriverGraph() {
         // Padding on fit
         padding: 10,
         // Whether to enable incremental mode
-        randomize: true,
-        // Node repulsion (non overlapping) multiplier
-        nodeRepulsion: 4500,
+        randomize: false,
+        // Node repulsion (non overlapping) multiplier (default 4500, might need to bump higher with more nodes)
+        nodeRepulsion: 10000,
         // Ideal (intra-graph) edge length
         idealEdgeLength: 100,
         // Divisor to compute edge forces
         edgeElasticity: 0.45,
         // Nesting factor (multiplier) to compute ideal edge length for inter-graph edges
         nestingFactor: 0.1,
-        // Gravity force (constant)
-        gravity: 0.25,
+        // Gravity force (constant), default 0.25
+        gravity: 0.1,
         // Maximum number of iterations to perform
         numIter: 2500,
         // Whether to tile disconnected nodes
         tile: true,
         // Type of layout animation. The option set is {'during', 'end', false}
-        animate: 'end',
+        animate: false,
         // Duration for animate:end
         animationDuration: 500,
         // Amount of vertical space to put between degree zero nodes during tiling (can also be a function)
@@ -114,6 +121,8 @@ export default function DriverGraph() {
         gravityRange: 3.8,
         // Initial cooling factor for incremental layout
         initialEnergyOnIncremental: 0.5,
+        spacingFactor: 1.25,
+        nodeOverlap: diameter,
       };
 
       cy.layout({
@@ -123,12 +132,12 @@ export default function DriverGraph() {
 
       // compute the size needed for circles
       // TODO: Get rid of magic numbers in this section
-      const length = 3;
-      const fontSize = 14;
-      const charWidth = fontSize * 0.6; // rough average
-      const textWidth = length * charWidth;
-      const textHeight = fontSize * 1.25; // account for vertical padding
-      const diameter = Math.max(textWidth, textHeight) + 30; // add padding
+      // const length = 3;
+      // const fontSize = 14;
+      // const charWidth = fontSize * 0.6; // rough average
+      // const textWidth = length * charWidth;
+      // const textHeight = fontSize * 1.25; // account for vertical padding
+      // const diameter = Math.max(textWidth, textHeight) + 30; // add padding
       cy.nodes().forEach((node) => {
         const ctor: string = getMostCommonCtor(
           node.data('yearsByCtor'),
@@ -141,7 +150,7 @@ export default function DriverGraph() {
           height: diameter,
         });
         if (node.data('raceCount') < global_min_races) {
-          (node as any).hide(); // TODO: Figure out the typing for this (or just change display style to 'none' directly )
+          node.hide();
           console.log(`hiding ${node.data('codename')}`);
         }
       });
@@ -258,117 +267,251 @@ export default function DriverGraph() {
     return defaultCtor;
   }
 
+  // return (
+  //   <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+  //     <CytoscapeComponent
+  //       elements={elements}
+  //       style={{ width: '100%', height: '95%' , 'background-color': '#f4f4f4'}}
+  //       stylesheet={[
+  //         {
+  //           selector: 'node',
+  //           style: {
+  //             'background-color': (ele: NodeSingular) =>
+  //               ctorColors[ele.data('displayCtor')] || '#0074D9',
+  //             label: 'data(codename)',
+  //             color: '#000',
+  //             shape: 'ellipse',
+  //             'text-valign': 'center',
+  //             'text-halign': 'center',
+  //             'font-size': '14px',
+  //             'text-margin-y': '5px',
+  //             'text-max-width': '100px',
+  //             'border-width': 2,
+  //             'border-color': '#000', // black outline
+  //             'border-opacity': 1,
+  //           },
+  //         },
+  //         {
+  //           selector: 'edge',
+  //           style: {
+  //             width: 4,
+  //             'line-color': '#aaa',
+  //             'target-arrow-color': '#aaa',
+  //             // label: 'data(label)',
+  //             'font-size': 12,
+  //             'text-rotation': 'autorotate',
+  //           },
+  //         },
+  //         {
+  //           selector: '.highlighted',
+  //           style: {
+  //             'background-color': '#FF4136',
+  //             'line-color': '#FF4136',
+  //             'target-arrow-color': '#FF4136',
+  //             'transition-property': 'background-color, line-color',
+  //             'transition-duration': '0.3s',
+  //           },
+  //         },
+
+  //         // 🌫️ Faded nodes and edges
+  //         {
+  //           selector: '.faded',
+  //           style: {
+  //             opacity: 0.8,
+  //             'text-opacity': 0.8,
+  //           },
+  //         },
+  //       ]}
+  //       cy={(cy: Core) => {
+  //         cyRef.current = cy;
+
+  //         if ((cy as any)._driverGraphEventsBound !== true) {
+  //           (cy as any)._driverGraphEventsBound = true; // gaurd against binding duplicate listeners
+  //           cy.on('tap', 'edge', (event: EventObject) => {
+  //             const edge = event.target;
+  //             const source = edge.source().data('name') || edge.source().id();
+  //             const target = edge.target().data('name') || edge.target().id();
+  //             const label = edge
+  //               .data('yearsByCtor')
+  //               .map(
+  //                 (pair: YearsByCtor) =>
+  //                   `${pair.ctor}[${pair.years.join(' ,')}]`
+  //               )
+  //               .join(', ');
+
+  //             setSelectedInfo(
+  //               `${source} & ${target} were teammates at ${label}`
+  //             );
+  //           });
+
+  //           cy.on('tap', (event) => {
+  //             if (event.target === cy) {
+  //               cy.elements().removeClass('faded highlighted');
+  //               setSelectedInfo(null);
+  //               setSelectedDrivers([]);
+  //             }
+  //           });
+
+  //           cy.on('tap', 'node', (event: EventObject) => {
+  //             const node = event.target;
+  //             const driverId = node.id();
+
+  //             // toggle driver selection
+  //             setSelectedDrivers((prev) =>
+  //               prev.includes(driverId)
+  //                 ? prev.filter((item) => item !== driverId)
+  //                 : [...prev, driverId]
+  //             );
+  //             return;
+  //           });
+  //         }
+  //       }}
+  //     />
+  //     {(
+  //       <div
+  //         style={{
+  //           padding: '1rem',
+  //           background: '#f4f4f4',
+  //           textAlign: 'center',
+  //         }}
+  //       >
+  //         {selectedInfo}
+  //       </div>
+  //     )}
+  //   </div>
+  // );
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <CytoscapeComponent
-        elements={elements}
-        style={{ width: '100%', height: '90%' }}
-        stylesheet={[
-          {
-            selector: 'node',
-            style: {
-              'background-color': (ele: NodeSingular) =>
-                ctorColors[ele.data('displayCtor')] || '#0074D9',
-              label: 'data(codename)',
-              color: '#969696ff',
-              shape: 'ellipse',
-              'text-valign': 'center',
-              'text-halign': 'center',
-              'font-size': '14px',
-              'text-margin-y': '5px',
-              'text-max-width': '100px',
-              'border-width': 2,
-              'border-color': '#000', // black outline
-              'border-opacity': 1,
-            },
-          },
-          {
-            selector: 'edge',
-            style: {
-              width: 10,
-              'line-color': '#aaa',
-              'target-arrow-color': '#aaa',
-              label: 'data(label)',
-              'font-size': 12,
-              'text-rotation': 'autorotate',
-            },
-          },
-          {
-            selector: '.highlighted',
-            style: {
-              'background-color': '#FF4136',
-              'line-color': '#FF4136',
-              'target-arrow-color': '#FF4136',
-              'transition-property': 'background-color, line-color',
-              'transition-duration': '0.3s',
-            },
-          },
-
-          // 🌫️ Faded nodes and edges
-          {
-            selector: '.faded',
-            style: {
-              opacity: 0.8,
-              'text-opacity': 0.8,
-            },
-          },
-        ]}
-        cy={(cy: Core) => {
-          cyRef.current = cy;
-
-          if ((cy as any)._driverGraphEventsBound !== true) {
-            (cy as any)._driverGraphEventsBound = true; // gaurd against binding duplicate listeners
-            cy.on('tap', 'edge', (event: EventObject) => {
-              const edge = event.target;
-              const source = edge.source().data('name') || edge.source().id();
-              const target = edge.target().data('name') || edge.target().id();
-              const label = edge
-                .data('yearsByCtor')
-                .map(
-                  (pair: YearsByCtor) =>
-                    `${pair.ctor}[${pair.years.join(' ,')}]`
-                )
-                .join(', ');
-
-              setSelectedInfo(
-                `${source} & ${target} were teammates at ${label}`
-              );
-            });
-
-            cy.on('tap', (event) => {
-              if (event.target === cy) {
-                cy.elements().removeClass('faded highlighted');
-                setSelectedInfo(null);
-                setSelectedDrivers([]);
-              }
-            });
-
-            cy.on('tap', 'node', (event: EventObject) => {
-              const node = event.target;
-              const driverId = node.id();
-
-              // toggle driver selection
-              setSelectedDrivers((prev) =>
-                prev.includes(driverId)
-                  ? prev.filter((item) => item !== driverId)
-                  : [...prev, driverId]
-              );
-              return;
-            });
-          }
-        }}
-      />
-      {selectedInfo && (
-        <div
+    <div
+      style={{
+        display: 'flex',
+        height: '100vh', // full screen height
+      }}
+    >
+      <div style={{ flex: 1 }}>
+        <CytoscapeComponent
+          elements={elements}
           style={{
-            padding: '1rem',
-            background: '#f4f4f4',
-            textAlign: 'center',
+            width: '100%',
+            height: '100%',
+            'background-color': '#f4f4f4',
+          }}
+          stylesheet={[
+            {
+              selector: 'node',
+              style: {
+                'background-color': (ele: NodeSingular) =>
+                  ctorColors[ele.data('displayCtor')] || '#0074D9',
+                label: 'data(codename)',
+                color: '#000',
+                shape: 'ellipse',
+                'text-valign': 'center',
+                'text-halign': 'center',
+                'font-size': '14px',
+                'text-margin-y': '5px',
+                'text-max-width': '100px',
+                'border-width': 2,
+                'border-color': '#000', // black outline
+                'border-opacity': 1,
+              },
+            },
+            {
+              selector: 'edge',
+              style: {
+                width: 4,
+                'line-color': '#aaa',
+                'target-arrow-color': '#aaa',
+                // label: 'data(label)',
+                'font-size': 12,
+                'text-rotation': 'autorotate',
+              },
+            },
+            {
+              selector: '.highlighted',
+              style: {
+                'background-color': '#FF4136',
+                'line-color': '#FF4136',
+                'target-arrow-color': '#FF4136',
+                'transition-property': 'background-color, line-color',
+                'transition-duration': '0.3s',
+              },
+            },
+
+            // 🌫️ Faded nodes and edges
+            {
+              selector: '.faded',
+              style: {
+                opacity: 0.8,
+                'text-opacity': 0.8,
+              },
+            },
+          ]}
+          cy={(cy: Core) => {
+            cyRef.current = cy;
+
+            if ((cy as any)._driverGraphEventsBound !== true) {
+              (cy as any)._driverGraphEventsBound = true; // gaurd against binding duplicate listeners
+              cy.on('tap', 'edge', (event: EventObject) => {
+                const edge = event.target;
+                const source = edge.source().data('name') || edge.source().id();
+                const target = edge.target().data('name') || edge.target().id();
+                const label = edge
+                  .data('yearsByCtor')
+                  .map(
+                    (pair: YearsByCtor) =>
+                      `${pair.ctor}[${pair.years.join(' ,')}]`
+                  )
+                  .join(', ');
+
+                setSelectedInfo(
+                  `${source} & ${target} were teammates at ${label}`
+                );
+              });
+
+              cy.on('tap', (event) => {
+                if (event.target === cy) {
+                  cy.elements().removeClass('faded highlighted');
+                  setSelectedInfo(null);
+                  setSelectedDrivers([]);
+                }
+              });
+
+              cy.on('tap', 'node', (event: EventObject) => {
+                const node = event.target;
+                const driverId = node.id();
+
+                // toggle driver selection
+                setSelectedDrivers((prev) =>
+                  prev.includes(driverId)
+                    ? prev.filter((item) => item !== driverId)
+                    : [...prev, driverId]
+                );
+                return;
+              });
+            }
+          }}
+        />
+      </div>
+      <div
+        style={{
+          width: '25%', // quarter width
+          backgroundColor: '#fafafa',
+          borderLeft: '1px solid #ddd',
+          padding: '1rem',
+          overflowY: 'auto',
+        }}
+      >
+        <h2
+          style={{
+            fontSize: '1.2rem',
+            fontWeight: 'bold',
+            marginBottom: '0.5rem',
+            textAlign: 'center'
           }}
         >
-          {selectedInfo}
-        </div>
-      )}
+          Equal Machinery
+        </h2>
+        {selectedInfo}
+      </div>
     </div>
   );
 }

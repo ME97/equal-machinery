@@ -207,4 +207,4 @@ app = FastAPI()
 
 @app.get("/graph")
 def get_graph():
-    return to_cytoscape_data(driver_by_id, ctor_by_id, driver_pair_by_id, 2000, 2024)
+    return to_cytoscape_data(driver_by_id, ctor_by_id, driver_pair_by_id, 2024, 2024)
