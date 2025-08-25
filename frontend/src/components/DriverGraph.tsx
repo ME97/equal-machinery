@@ -1,10 +1,11 @@
 // src/components/DriverGraph.tsx
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import cytoscape, { Core, EventObject, NodeSingular } from 'cytoscape';
 import CytoscapeComponent from 'react-cytoscapejs';
 import coseBilkent from 'cytoscape-cose-bilkent';
 import { NodeData, EdgeData, YearsByCtor } from './types';
+import nodePositions from '../data/nodePositions.json';
 
 cytoscape.use(coseBilkent);
 
@@ -84,9 +85,8 @@ function updateNodeVisibility(
     const raceCount: number = node.data('raceCount');
 
     const visible =
-      yearsActive.some(
-        (year) => minYear <= year && year <= maxYear
-      ) && raceCount >= minRaceCount;
+      yearsActive.some((year) => minYear <= year && year <= maxYear) &&
+      raceCount >= minRaceCount;
 
     if (visible) {
       node.show();
@@ -94,7 +94,10 @@ function updateNodeVisibility(
       node.hide();
     }
   });
+  cy.fit(cy.elements(':visible'), 30); // 50px padding
 }
+
+// The main function to export the component
 export default function DriverGraph() {
   const [elements, setElements] = useState<(NodeData | EdgeData)[]>([]);
   const [selectedInfo, setSelectedInfo] = useState<string | null>(null);
@@ -110,6 +113,30 @@ export default function DriverGraph() {
   );
   const cyRef = useRef<Core | null>(null);
 
+  function savePositions() {
+    const cy = cyRef.current;
+    if (!cy) return;
+
+    const positions = cy.nodes().reduce((acc, node) => {
+      acc[node.id()] = node.position(); // { x, y }
+      return acc;
+    }, {} as Record<string, { x: number; y: number }>);
+
+    // Print to console so you can copy/paste into a JSON file
+    console.log(JSON.stringify(positions, null, 2));
+
+    // Optional: download as JSON file directly
+    const blob = new Blob([JSON.stringify(positions, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'nodePositions.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   // initial graph fetch
   useEffect(() => {
     fetch('/graph')
@@ -119,9 +146,9 @@ export default function DriverGraph() {
   }, []);
 
   // setup edge/node labelling and styles. This should only run once (when all elements are added)
-  // TODO: Can we move this to the cy.ready() call?
   useEffect(() => {
     if (cyRef.current && elements.length > 0) {
+      console.log('elements useEffect running');
       const cy = cyRef.current;
 
       // compute the size needed for circles
@@ -145,11 +172,11 @@ export default function DriverGraph() {
         // Padding on fit
         padding: 30,
         // Whether to enable incremental mode
-        randomize: false,
+        randomize: true,
         // Node repulsion (non overlapping) multiplier (default 4500, might need to bump higher with more nodes)
-        nodeRepulsion: 10000,
+        nodeRepulsion: 1000,
         // Ideal (intra-graph) edge length
-        idealEdgeLength: 100,
+        idealEdgeLength: 150,
         // Divisor to compute edge forces
         edgeElasticity: 0.45,
         // Nesting factor (multiplier) to compute ideal edge length for inter-graph edges
@@ -180,17 +207,22 @@ export default function DriverGraph() {
         nodeOverlap: diameter,
       };
 
-      cy.layout({
-        name: 'cose-bilkent',
-        ...coseBilkentDefaultOptions,
-      }).run();
-
       cy.nodes().forEach((node) => {
         node.style({
           width: diameter,
           height: diameter,
         });
       });
+
+      console.log(nodePositions);
+      cy.layout( {
+        name: 'preset',
+        positions: nodePositions
+      }).run();
+      // cy.layout({
+      //   name: 'cose-bilkent',
+      //   ...coseBilkentDefaultOptions,
+      // }).run();
     }
   }, [elements]);
 
@@ -224,7 +256,7 @@ export default function DriverGraph() {
     }
   }, [selectedDrivers]);
 
-  // update visible nodes on year range change
+  // // update visible nodes on year range change
   useEffect(() => {
     if (cyRef.current) {
       updateNodeVisibility(
@@ -235,11 +267,8 @@ export default function DriverGraph() {
       );
       return;
     }
-  }, [minDisplayYear, maxDisplayYear, minDisplayRaceCount]);
+  }, [minDisplayYear, maxDisplayYear, minDisplayRaceCount, elements]);
 
-  //
-
-  // compute shortest path between two drivers, and highlight nodes and edges on path
   // TODO: What if there are multiple shortest paths of same length?
   function highlightShortestPathInBrowser(
     sourceId: string,
@@ -255,8 +284,14 @@ export default function DriverGraph() {
     const dijkstra = cy.elements().dijkstra({ root: `#${sourceId}` });
     const path = dijkstra.pathTo(cy.getElementById(targetId));
 
-    if (path.length === 0) {
-      alert('No path found.');
+    const sourceName: string = cy.getElementById(`${sourceId}`).data('name');
+    const targetName: string = cy.getElementById(`${targetId}`).data('name');
+
+    console.log(path[0].data('name'));
+
+    // check if path was not found
+    if (path.length === 1) {
+      setSelectedInfo(`No path from ${sourceName} to ${targetName}`);
       return;
     }
 
@@ -266,9 +301,7 @@ export default function DriverGraph() {
     // Fade everything else
     cy.elements().not(path).addClass('faded');
 
-    // Optional: show number of steps
-    const sourceName: string = cy.getElementById(`${sourceId}`).data('name');
-    const targetName: string = cy.getElementById(`${targetId}`).data('name');
+    // Show number of steps
     setSelectedInfo(
       `Shortest path from ${sourceName} to ${targetName} is ${Math.floor(
         path.length / 2
@@ -284,7 +317,7 @@ export default function DriverGraph() {
       }
       if (ele.isEdge()) {
         // TODO: update this to be correct for the given year (maybe this is already handled with how label is set)
-        parts.push(ele.data('label'));
+        parts.push('NO_TEAM');
       }
     }
     const pathString = parts.join(' -> ');
@@ -292,119 +325,62 @@ export default function DriverGraph() {
     setSelectedInfo(pathString);
   }
 
-  // return (
-  //   <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-  //     <CytoscapeComponent
-  //       elements={elements}
-  //       style={{ width: '100%', height: '95%' , 'background-color': '#f4f4f4'}}
-  //       stylesheet={[
-  //         {
-  //           selector: 'node',
-  //           style: {
-  //             'background-color': (ele: NodeSingular) =>
-  //               ctorColors[ele.data('displayCtor')] || '#0074D9',
-  //             label: 'data(codename)',
-  //             color: '#000',
-  //             shape: 'ellipse',
-  //             'text-valign': 'center',
-  //             'text-halign': 'center',
-  //             'font-size': '14px',
-  //             'text-margin-y': '5px',
-  //             'text-max-width': '100px',
-  //             'border-width': 2,
-  //             'border-color': '#000', // black outline
-  //             'border-opacity': 1,
-  //           },
-  //         },
-  //         {
-  //           selector: 'edge',
-  //           style: {
-  //             width: 4,
-  //             'line-color': '#aaa',
-  //             'target-arrow-color': '#aaa',
-  //             // label: 'data(label)',
-  //             'font-size': 12,
-  //             'text-rotation': 'autorotate',
-  //           },
-  //         },
-  //         {
-  //           selector: '.highlighted',
-  //           style: {
-  //             'background-color': '#FF4136',
-  //             'line-color': '#FF4136',
-  //             'target-arrow-color': '#FF4136',
-  //             'transition-property': 'background-color, line-color',
-  //             'transition-duration': '0.3s',
-  //           },
-  //         },
+  const cyStylesheet = useMemo(
+    () => [
+      {
+        selector: 'node',
+        style: {
+          backgroundColor: (ele: NodeSingular) =>
+            ctorColorMap[ele.data('displayCtor')] || '#0074D9',
+          label: 'data(codename)',
+          color: '#000',
+          shape: 'ellipse',
+          'text-valign': 'center',
+          'text-halign': 'center',
+          'font-size': '14px',
+          'text-margin-y': '5px',
+          'text-max-width': '100px',
+          'border-width': 2,
+          'border-color': '#000',
+          'border-opacity': 1,
+        },
+      },
+      {
+        selector: 'edge',
+        style: {
+          width: 4,
+          'line-color': '#aaa',
+          'target-arrow-color': '#aaa',
+          'font-size': 12,
+          'text-rotation': 'autorotate',
+        },
+      },
+      {
+        selector: '.highlighted',
+        style: {
+          'background-color': '#FF4136', // typo fix: backgroundColor → background-color
+          'line-color': '#FF4136',
+          'target-arrow-color': '#FF4136',
+          'transition-property': 'background-color, line-color',
+          'transition-duration': '0.3s',
+        },
+      },
+      {
+        selector: '.faded',
+        style: {
+          opacity: 0.8,
+          'text-opacity': 0.8,
+        },
+      },
+    ],
+    [] // only recompute when color map changes
+  );
 
-  //         // 🌫️ Faded nodes and edges
-  //         {
-  //           selector: '.faded',
-  //           style: {
-  //             opacity: 0.8,
-  //             'text-opacity': 0.8,
-  //           },
-  //         },
-  //       ]}
-  //       cy={(cy: Core) => {
-  //         cyRef.current = cy;
+  const cyStyle = useMemo(
+    () => ({ width: '100%', height: '100%', backgroundColor: '#f4f4f4' }),
+    []
+  );
 
-  //         if ((cy as any)._driverGraphEventsBound !== true) {
-  //           (cy as any)._driverGraphEventsBound = true; // gaurd against binding duplicate listeners
-  //           cy.on('tap', 'edge', (event: EventObject) => {
-  //             const edge = event.target;
-  //             const source = edge.source().data('name') || edge.source().id();
-  //             const target = edge.target().data('name') || edge.target().id();
-  //             const label = edge
-  //               .data('yearsByCtor')
-  //               .map(
-  //                 (pair: YearsByCtor) =>
-  //                   `${pair.ctor}[${pair.years.join(' ,')}]`
-  //               )
-  //               .join(', ');
-
-  //             setSelectedInfo(
-  //               `${source} & ${target} were teammates at ${label}`
-  //             );
-  //           });
-
-  //           cy.on('tap', (event) => {
-  //             if (event.target === cy) {
-  //               cy.elements().removeClass('faded highlighted');
-  //               setSelectedInfo(null);
-  //               setSelectedDrivers([]);
-  //             }
-  //           });
-
-  //           cy.on('tap', 'node', (event: EventObject) => {
-  //             const node = event.target;
-  //             const driverId = node.id();
-
-  //             // toggle driver selection
-  //             setSelectedDrivers((prev) =>
-  //               prev.includes(driverId)
-  //                 ? prev.filter((item) => item !== driverId)
-  //                 : [...prev, driverId]
-  //             );
-  //             return;
-  //           });
-  //         }
-  //       }}
-  //     />
-  //     {(
-  //       <div
-  //         style={{
-  //           padding: '1rem',
-  //           background: '#f4f4f4',
-  //           textAlign: 'center',
-  //         }}
-  //       >
-  //         {selectedInfo}
-  //       </div>
-  //     )}
-  //   </div>
-  // );
   return (
     <div
       style={{
@@ -416,74 +392,15 @@ export default function DriverGraph() {
       <div style={{ flex: 1 }}>
         <CytoscapeComponent
           elements={elements}
-          style={{
-            width: '100%',
-            height: '100%',
-            backgroundColor: '#f4f4f4',
-          }}
-          stylesheet={[
-            {
-              selector: 'node',
-              style: {
-                backgroundColor: (ele: NodeSingular) =>
-                  ctorColorMap[ele.data('displayCtor')] || '#0074D9',
-                label: 'data(codename)',
-                color: '#000',
-                shape: 'ellipse',
-                'text-valign': 'center',
-                'text-halign': 'center',
-                'font-size': '14px',
-                'text-margin-y': '5px',
-                'text-max-width': '100px',
-                'border-width': 2,
-                'border-color': '#000', // black outline
-                'border-opacity': 1,
-              },
-            },
-            {
-              selector: 'edge',
-              style: {
-                width: 4,
-                'line-color': '#aaa',
-                'target-arrow-color': '#aaa',
-                // label: 'data(label)',
-                'font-size': 12,
-                'text-rotation': 'autorotate',
-              },
-            },
-            {
-              selector: '.highlighted',
-              style: {
-                backgroundColour: '#FF4136',
-                'line-color': '#FF4136',
-                'target-arrow-color': '#FF4136',
-                'transition-property': 'background-color, line-color',
-                'transition-duration': '0.3s',
-              },
-            },
-
-            // 🌫️ Faded nodes and edges
-            {
-              selector: '.faded',
-              style: {
-                opacity: 0.8,
-                'text-opacity': 0.8,
-              },
-            },
-          ]}
+          style={cyStyle}
+          stylesheet={cyStylesheet}
           cy={(cy: Core) => {
             cyRef.current = cy;
-            cy.ready(() => {
-              updateNodeVisibility(
-                cy,
-                minDisplayRaceCount,
-                minDisplayYear,
-                maxDisplayYear
-              );
-            });
 
             if ((cy as any)._driverGraphEventsBound !== true) {
               (cy as any)._driverGraphEventsBound = true; // gaurd against binding duplicate listeners
+
+              /* EVENT LISTENERS */
               cy.on('tap', 'edge', (event: EventObject) => {
                 const edge = event.target;
                 const source = edge.source().data('name') || edge.source().id();
@@ -547,13 +464,18 @@ export default function DriverGraph() {
           Equal Machinery
         </h2>
         {selectedInfo}
-
+        <button onClick={savePositions}>Save Positions</button>
         <div style={{ marginBottom: '1rem' }}>
           <label>Min Value:</label>
           <input
             type="number"
             value={minDisplayYear}
-            onChange={(e) => setMinDisplayYear(Number(e.target.value))}
+            onChange={(e) => {
+              const newMin = Number(e.target.value);
+              setMinDisplayYear(() => {
+                return newMin <= maxDisplayYear ? newMin : minDisplayYear;
+              });
+            }}
             style={{ width: '25%', padding: '0.5rem', marginTop: '0.25rem' }}
           />
         </div>
@@ -563,7 +485,12 @@ export default function DriverGraph() {
           <input
             type="number"
             value={maxDisplayYear}
-            onChange={(e) => setMaxDisplayYear(Number(e.target.value))}
+            onChange={(e) => {
+              const newMax = Number(e.target.value);
+              setMaxDisplayYear(() => {
+                return newMax >= minDisplayYear ? newMax : minDisplayYear;
+              });
+            }}
             style={{ width: '25%', padding: '0.5rem', marginTop: '0.25rem' }}
           />
         </div>

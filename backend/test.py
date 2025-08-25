@@ -130,15 +130,8 @@ def to_cytoscape_data(
 
     for id in driver_by_id:
         driver: Driver = driver_by_id[id]
-        # flat = [(ctor_id, years) for ctor_id, years in driver.years_by_ctor.items()]
-        # print(driver)
-        # print(flat)
-        # TODO: Problem is that drivers who didn't have any teammates don't have this list
-        #       - right now we are populating driver.years_by_ctor in populate_driver_pairings
-        #           - need to add special case for when pair isn't found
-        # also we should probably compute this in the frontend, because it will depend on year range
-        #
-        # displayCtor = max(flat, key=lambda pair: (len(pair[1]), max(pair[1])))
+        if len(driver.driver_pairs) == 0:
+            continue # do not include drivers with no teammates
         if driver.years_active & year_range:
             nodes.append(
                 {
@@ -198,7 +191,7 @@ driver_pair_by_id = populate_driver_pairings(
 with open("dump.json", "w") as f:
     f.write(
         json.dumps(
-            to_cytoscape_data(driver_by_id, ctor_by_id, driver_pair_by_id, 2000, 2024)
+            to_cytoscape_data(driver_by_id, ctor_by_id, driver_pair_by_id, 0, 2024)
         )
     )
 
@@ -207,4 +200,4 @@ app = FastAPI()
 
 @app.get("/graph")
 def get_graph():
-    return to_cytoscape_data(driver_by_id, ctor_by_id, driver_pair_by_id, 2010, 2024)
+    return to_cytoscape_data(driver_by_id, ctor_by_id, driver_pair_by_id, 0, 2024)
