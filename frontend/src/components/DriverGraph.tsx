@@ -8,13 +8,12 @@ import { NodeData, EdgeData, YearsByCtor } from './types';
 
 cytoscape.use(coseBilkent);
 
-// dummy vars for testing
-// TODO: Replace these user input
-const global_min_year = 2024;
-const global_max_year = 2024;
-const global_min_races = 10; // minimum number of races needed to display node
+/* GLOBAL CONSTANTS */
+const DEFAULT_MIN_DISPLAY_YEAR = 2020;
+const DEFAULT_MAX_DISPLAY_YEAR = new Date().getFullYear();
+const DEFAULT_MIN_DISPLAY_RACE_COUNT = 10;
 
-const ctorColors: Record<string, string> = {
+const ctorColorMap: Record<string, string> = {
   Ferrari: '#ff2800',
   Mercedes: '#00D7B6',
   'Red Bull': '#0600ef',
@@ -27,12 +26,88 @@ const ctorColors: Record<string, string> = {
   McLaren: '#F47600',
   Renault: '#FFF500',
   'Force India': '#F596C8',
+  'Alfa Romeo': '#981E32',
 };
 
+/* HELPER FUNCTIONS */
+// TODO: Consider moving these to another file
+
+// getMostCommonCtor(yearsByCtor, yearMin, yearMax)
+//    returns the ctor with the most years in [yearMin, yearMax]
+//    picks the most recent ctor in the case of a tie
+function getMostCommonCtor(
+  yearsByCtor: YearsByCtor[],
+  yearMin: number = 0,
+  yearMax: number = 9999
+): string {
+  let defaultCtor: string = 'DEFAULT_CTOR';
+  if (yearsByCtor.length !== 0) {
+    defaultCtor = yearsByCtor.at(-1)!.ctor;
+    let maxCount = yearsByCtor
+      .at(-1)!
+      .years.filter((year) => yearMin <= year && year <= yearMax).length;
+
+    for (let i = yearsByCtor.length - 2; i >= 0; --i) {
+      let count = yearsByCtor[i].years.filter(
+        (year) => yearMin <= year && year <= yearMax
+      ).length;
+      if (count > maxCount) {
+        maxCount = count;
+        defaultCtor = yearsByCtor[i].ctor;
+      }
+    }
+  }
+
+  return defaultCtor;
+}
+
+// updateNodeVisibility(cy, minRaceCount, minYear, maxYear)
+//  Changes node visibility based on parameters
+//    Visible nodes must have at least one active year in [minYear, maxYear],
+//      and must have at least minRaceCount races (overall, not in year range)
+//  Also updates which displayCtor (used for coloring)
+function updateNodeVisibility(
+  cy: cytoscape.Core,
+  minRaceCount: number,
+  minYear: number,
+  maxYear: number
+): void {
+  cy.nodes().forEach((node: NodeSingular) => {
+    const ctor: string = getMostCommonCtor(
+      node.data('yearsByCtor'),
+      minYear,
+      maxYear
+    );
+    node.data('displayCtor', ctor);
+
+    const yearsActive: number[] = node.data('yearsActive');
+    const raceCount: number = node.data('raceCount');
+
+    const visible =
+      yearsActive.some(
+        (year) => minYear <= year && year <= maxYear
+      ) && raceCount >= minRaceCount;
+
+    if (visible) {
+      node.show();
+    } else {
+      node.hide();
+    }
+  });
+}
 export default function DriverGraph() {
   const [elements, setElements] = useState<(NodeData | EdgeData)[]>([]);
   const [selectedInfo, setSelectedInfo] = useState<string | null>(null);
   const [selectedDrivers, setSelectedDrivers] = useState<string[]>([]);
+  const [minDisplayYear, setMinDisplayYear] = useState(
+    DEFAULT_MIN_DISPLAY_YEAR
+  );
+  const [maxDisplayYear, setMaxDisplayYear] = useState(
+    DEFAULT_MAX_DISPLAY_YEAR
+  );
+  const [minDisplayRaceCount, setMinDisplayRaceCount] = useState(
+    DEFAULT_MIN_DISPLAY_RACE_COUNT
+  );
   const cyRef = useRef<Core | null>(null);
 
   // initial graph fetch
@@ -43,34 +118,14 @@ export default function DriverGraph() {
       .catch((err) => console.error('Error fetching graph:', err));
   }, []);
 
-  // setup edge labelling and styles. This should only run once (when all elements are added)
+  // setup edge/node labelling and styles. This should only run once (when all elements are added)
+  // TODO: Can we move this to the cy.ready() call?
   useEffect(() => {
     if (cyRef.current && elements.length > 0) {
       const cy = cyRef.current;
 
-      // set up edge labels TODO: maybe move this to it's own hook
-      //  - it will be triggered on target year change
-      cy.edges().forEach((edge) => {
-        const yearsByCtor: YearsByCtor[] = edge.data('yearsByCtor');
-        let label: string | undefined = yearsByCtor.at(-1)!.ctor;
-
-        // start from back, to look at newest first
-        for (let i = yearsByCtor.length - 1; i >= 0; --i) {
-          const years: number[] = yearsByCtor[i].years;
-
-          // check if any of the years raced for this ctor fall in range
-          let valid = years.some(
-            (year) => global_min_year <= year && year <= global_max_year
-          );
-
-          if (valid) {
-            label = yearsByCtor[i].ctor;
-            break; // break on first valid found
-          }
-        }
-        edge.data('label', label ?? '');
-      });
-
+      // compute the size needed for circles
+      // TODO: Remove magic numbers / refine this
       const length = 3;
       const fontSize = 14;
       const charWidth = fontSize * 0.6; // rough average
@@ -88,7 +143,7 @@ export default function DriverGraph() {
         // Whether to fit the network view after when done
         fit: true,
         // Padding on fit
-        padding: 10,
+        padding: 30,
         // Whether to enable incremental mode
         randomize: false,
         // Node repulsion (non overlapping) multiplier (default 4500, might need to bump higher with more nodes)
@@ -130,34 +185,17 @@ export default function DriverGraph() {
         ...coseBilkentDefaultOptions,
       }).run();
 
-      // compute the size needed for circles
-      // TODO: Get rid of magic numbers in this section
-      // const length = 3;
-      // const fontSize = 14;
-      // const charWidth = fontSize * 0.6; // rough average
-      // const textWidth = length * charWidth;
-      // const textHeight = fontSize * 1.25; // account for vertical padding
-      // const diameter = Math.max(textWidth, textHeight) + 30; // add padding
       cy.nodes().forEach((node) => {
-        const ctor: string = getMostCommonCtor(
-          node.data('yearsByCtor'),
-          global_min_year,
-          global_max_year
-        );
-        node.data('displayCtor', ctor);
         node.style({
           width: diameter,
           height: diameter,
         });
-        if (node.data('raceCount') < global_min_races) {
-          node.hide();
-          console.log(`hiding ${node.data('codename')}`);
-        }
       });
     }
   }, [elements]);
 
   // handle driver selection
+  // TODO: Bug where if a driver is selected but then the year range changes, they are still selected
   useEffect(() => {
     const cy = cyRef.current;
     if (!cy) return;
@@ -185,6 +223,21 @@ export default function DriverGraph() {
       return;
     }
   }, [selectedDrivers]);
+
+  // update visible nodes on year range change
+  useEffect(() => {
+    if (cyRef.current) {
+      updateNodeVisibility(
+        cyRef.current,
+        minDisplayRaceCount,
+        minDisplayYear,
+        maxDisplayYear
+      );
+      return;
+    }
+  }, [minDisplayYear, maxDisplayYear, minDisplayRaceCount]);
+
+  //
 
   // compute shortest path between two drivers, and highlight nodes and edges on path
   // TODO: What if there are multiple shortest paths of same length?
@@ -237,34 +290,6 @@ export default function DriverGraph() {
     const pathString = parts.join(' -> ');
     console.log(pathString);
     setSelectedInfo(pathString);
-  }
-
-  // computes the ctor with the most years in [yearMin, yearMax].
-  //    - on tie, pick most recent
-  function getMostCommonCtor(
-    yearsByCtor: YearsByCtor[],
-    yearMin: number = 0,
-    yearMax: number = 9999
-  ): string {
-    let defaultCtor: string = 'DEFAULT_CTOR';
-    if (yearsByCtor.length !== 0) {
-      defaultCtor = yearsByCtor.at(-1)!.ctor;
-      let maxCount = yearsByCtor
-        .at(-1)!
-        .years.filter((year) => yearMin <= year && year <= yearMax).length;
-
-      for (let i = yearsByCtor.length - 2; i >= 0; --i) {
-        let count = yearsByCtor[i].years.filter(
-          (year) => yearMin <= year && year <= yearMax
-        ).length;
-        if (count > maxCount) {
-          maxCount = count;
-          defaultCtor = yearsByCtor[i].ctor;
-        }
-      }
-    }
-
-    return defaultCtor;
   }
 
   // return (
@@ -387,20 +412,21 @@ export default function DriverGraph() {
         height: '100vh', // full screen height
       }}
     >
+      {/* Graph */}
       <div style={{ flex: 1 }}>
         <CytoscapeComponent
           elements={elements}
           style={{
             width: '100%',
             height: '100%',
-            'background-color': '#f4f4f4',
+            backgroundColor: '#f4f4f4',
           }}
           stylesheet={[
             {
               selector: 'node',
               style: {
-                'background-color': (ele: NodeSingular) =>
-                  ctorColors[ele.data('displayCtor')] || '#0074D9',
+                backgroundColor: (ele: NodeSingular) =>
+                  ctorColorMap[ele.data('displayCtor')] || '#0074D9',
                 label: 'data(codename)',
                 color: '#000',
                 shape: 'ellipse',
@@ -428,7 +454,7 @@ export default function DriverGraph() {
             {
               selector: '.highlighted',
               style: {
-                'background-color': '#FF4136',
+                backgroundColour: '#FF4136',
                 'line-color': '#FF4136',
                 'target-arrow-color': '#FF4136',
                 'transition-property': 'background-color, line-color',
@@ -447,6 +473,14 @@ export default function DriverGraph() {
           ]}
           cy={(cy: Core) => {
             cyRef.current = cy;
+            cy.ready(() => {
+              updateNodeVisibility(
+                cy,
+                minDisplayRaceCount,
+                minDisplayYear,
+                maxDisplayYear
+              );
+            });
 
             if ((cy as any)._driverGraphEventsBound !== true) {
               (cy as any)._driverGraphEventsBound = true; // gaurd against binding duplicate listeners
@@ -491,6 +525,8 @@ export default function DriverGraph() {
           }}
         />
       </div>
+
+      {/* Display Panel*/}
       <div
         style={{
           width: '25%', // quarter width
@@ -505,12 +541,32 @@ export default function DriverGraph() {
             fontSize: '1.2rem',
             fontWeight: 'bold',
             marginBottom: '0.5rem',
-            textAlign: 'center'
+            textAlign: 'center',
           }}
         >
           Equal Machinery
         </h2>
         {selectedInfo}
+
+        <div style={{ marginBottom: '1rem' }}>
+          <label>Min Value:</label>
+          <input
+            type="number"
+            value={minDisplayYear}
+            onChange={(e) => setMinDisplayYear(Number(e.target.value))}
+            style={{ width: '25%', padding: '0.5rem', marginTop: '0.25rem' }}
+          />
+        </div>
+
+        <div>
+          <label>Max Value:</label>
+          <input
+            type="number"
+            value={maxDisplayYear}
+            onChange={(e) => setMaxDisplayYear(Number(e.target.value))}
+            style={{ width: '25%', padding: '0.5rem', marginTop: '0.25rem' }}
+          />
+        </div>
       </div>
     </div>
   );
