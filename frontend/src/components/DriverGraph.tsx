@@ -1,7 +1,12 @@
 // src/components/DriverGraph.tsx
 
 import { useEffect, useState, useRef, useMemo } from 'react';
-import cytoscape, { Core, EventObject, NodeSingular } from 'cytoscape';
+import cytoscape, {
+  Core,
+  EdgeSingular,
+  EventObject,
+  NodeSingular,
+} from 'cytoscape';
 import CytoscapeComponent from 'react-cytoscapejs';
 import coseBilkent from 'cytoscape-cose-bilkent';
 import { NodeData, EdgeData, YearsByCtor } from './types';
@@ -10,9 +15,11 @@ import nodePositions from '../data/nodePositions.json';
 cytoscape.use(coseBilkent);
 
 /* GLOBAL CONSTANTS */
-const DEFAULT_MIN_DISPLAY_YEAR = 2020;
+const DEFAULT_MIN_DISPLAY_YEAR = 2024;
 const DEFAULT_MAX_DISPLAY_YEAR = new Date().getFullYear();
 const DEFAULT_MIN_DISPLAY_RACE_COUNT = 10;
+const NODE_HOVER_SCALE = 1.5;
+const DEFAULT_NODE_DIAMETER = computeNodeDiameter();
 
 const ctorColorMap: Record<string, string> = {
   Ferrari: '#ff2800',
@@ -28,6 +35,15 @@ const ctorColorMap: Record<string, string> = {
   Renault: '#FFF500',
   'Force India': '#F596C8',
   'Alfa Romeo': '#981E32',
+  'Racing Point': '#F596C8',
+  'Toro Rosso': '#469BFF',
+  AlphaTauri: '#00293F',
+  Jordan: '#ffff00',
+  'Manor Marussia': '#db1922',
+  Marussia: '#db1922',
+  'Lotus F1': '#b39759',
+  Toyota: '#db3d4b',
+  Ligier: '#0056ba',
 };
 
 /* HELPER FUNCTIONS */
@@ -94,7 +110,22 @@ function updateNodeVisibility(
       node.hide();
     }
   });
-  cy.fit(cy.elements(':visible'), 30); // 50px padding
+  cy.fit(cy.elements(':visible'), 30); // fit to visible elements
+  const fitZoom = cy.zoom();
+  console.log(cy.zoom());
+  cy.minZoom(fitZoom * 0.85);
+  cy.maxZoom(fitZoom * 5);
+}
+
+// computes node diameter for styling
+// TODO: Right now this is literally just a constant, maybe switch to parameters with defaults?
+function computeNodeDiameter(): number {
+  const length = 3;
+  const fontSize = 14;
+  const charWidth = fontSize * 0.6; // rough average
+  const textWidth = length * charWidth;
+  const textHeight = fontSize * 1.25; // account for vertical padding
+  return Math.max(textWidth, textHeight) + 30; // add padding
 }
 
 // The main function to export the component
@@ -113,6 +144,8 @@ export default function DriverGraph() {
   );
   const cyRef = useRef<Core | null>(null);
 
+  // saves current node positions to JSON file.
+  //  used to tweak layout for preset
   function savePositions() {
     const cy = cyRef.current;
     if (!cy) return;
@@ -145,80 +178,65 @@ export default function DriverGraph() {
       .catch((err) => console.error('Error fetching graph:', err));
   }, []);
 
-  // setup edge/node labelling and styles. This should only run once (when all elements are added)
+  // run layout when elements are all loaded
   useEffect(() => {
     if (cyRef.current && elements.length > 0) {
-      console.log('elements useEffect running');
       const cy = cyRef.current;
 
-      // compute the size needed for circles
-      // TODO: Remove magic numbers / refine this
-      const length = 3;
-      const fontSize = 14;
-      const charWidth = fontSize * 0.6; // rough average
-      const textWidth = length * charWidth;
-      const textHeight = fontSize * 1.25; // account for vertical padding
-      const diameter = Math.max(textWidth, textHeight) + 30; // add padding
+      // use preset positions
+      cy.layout({
+        name: 'preset',
+        positions: nodePositions,
+      }).run();
 
       // cose-bilkent default options
-      const coseBilkentDefaultOptions = {
-        quality: 'default',
-        // Whether to include labels in node dimensions. Useful for avoiding label overlap
-        nodeDimensionsIncludeLabels: true,
-        // number of ticks per frame; higher is faster but more jerky
-        refresh: 30,
-        // Whether to fit the network view after when done
-        fit: true,
-        // Padding on fit
-        padding: 30,
-        // Whether to enable incremental mode
-        randomize: true,
-        // Node repulsion (non overlapping) multiplier (default 4500, might need to bump higher with more nodes)
-        nodeRepulsion: 1000,
-        // Ideal (intra-graph) edge length
-        idealEdgeLength: 150,
-        // Divisor to compute edge forces
-        edgeElasticity: 0.45,
-        // Nesting factor (multiplier) to compute ideal edge length for inter-graph edges
-        nestingFactor: 0.1,
-        // Gravity force (constant), default 0.25
-        gravity: 0.1,
-        // Maximum number of iterations to perform
-        numIter: 2500,
-        // Whether to tile disconnected nodes
-        tile: true,
-        // Type of layout animation. The option set is {'during', 'end', false}
-        animate: false,
-        // Duration for animate:end
-        animationDuration: 500,
-        // Amount of vertical space to put between degree zero nodes during tiling (can also be a function)
-        tilingPaddingVertical: 10,
-        // Amount of horizontal space to put between degree zero nodes during tiling (can also be a function)
-        tilingPaddingHorizontal: 10,
-        // Gravity range (constant) for compounds
-        gravityRangeCompound: 1.5,
-        // Gravity force (constant) for compounds
-        gravityCompound: 1.0,
-        // Gravity range (constant)
-        gravityRange: 3.8,
-        // Initial cooling factor for incremental layout
-        initialEnergyOnIncremental: 0.5,
-        spacingFactor: 1.25,
-        nodeOverlap: diameter,
-      };
+      // const coseBilkentDefaultOptions = {
+      //   quality: 'default',
+      //   // Whether to include labels in node dimensions. Useful for avoiding label overlap
+      //   nodeDimensionsIncludeLabels: true,
+      //   // number of ticks per frame; higher is faster but more jerky
+      //   refresh: 30,
+      //   // Whether to fit the network view after when done
+      //   fit: true,
+      //   // Padding on fit
+      //   padding: 30,
+      //   // Whether to enable incremental mode
+      //   randomize: false,
+      //   // Node repulsion (non overlapping) multiplier (default 4500, might need to bump higher with more nodes)
+      //   nodeRepulsion: 1000,
+      //   // Ideal (intra-graph) edge length
+      //   idealEdgeLength: 150,
+      //   // Divisor to compute edge forces
+      //   edgeElasticity: 0.45,
+      //   // Nesting factor (multiplier) to compute ideal edge length for inter-graph edges
+      //   nestingFactor: 0.1,
+      //   // Gravity force (constant), default 0.25
+      //   gravity: 0.1,
+      //   // Maximum number of iterations to perform
+      //   numIter: 2500,
+      //   // Whether to tile disconnected nodes
+      //   tile: true,
+      //   // Type of layout animation. The option set is {'during', 'end', false}
+      //   animate: false,
+      //   // Duration for animate:end
+      //   animationDuration: 500,
+      //   // Amount of vertical space to put between degree zero nodes during tiling (can also be a function)
+      //   tilingPaddingVertical: 10,
+      //   // Amount of horizontal space to put between degree zero nodes during tiling (can also be a function)
+      //   tilingPaddingHorizontal: 10,
+      //   // Gravity range (constant) for compounds
+      //   gravityRangeCompound: 1.5,
+      //   // Gravity force (constant) for compounds
+      //   gravityCompound: 1.0,
+      //   // Gravity range (constant)
+      //   gravityRange: 3.8,
+      //   // Initial cooling factor for incremental layout
+      //   initialEnergyOnIncremental: 0.5,
+      //   spacingFactor: 1.25,
+      //   nodeOverlap: diameter,
+      // };
 
-      cy.nodes().forEach((node) => {
-        node.style({
-          width: diameter,
-          height: diameter,
-        });
-      });
-
-      console.log(nodePositions);
-      cy.layout( {
-        name: 'preset',
-        positions: nodePositions
-      }).run();
+      // layout using force directed algorithm (slow for entire graph)
       // cy.layout({
       //   name: 'cose-bilkent',
       //   ...coseBilkentDefaultOptions,
@@ -231,7 +249,7 @@ export default function DriverGraph() {
   useEffect(() => {
     const cy = cyRef.current;
     if (!cy) return;
-    cy.elements().removeClass('highlighted faded');
+    cy.nodes().removeClass('highlighted faded');
 
     if (selectedDrivers.length === 1) {
       const driverId = selectedDrivers.at(0)!;
@@ -258,14 +276,23 @@ export default function DriverGraph() {
 
   // // update visible nodes on year range change
   useEffect(() => {
-    if (cyRef.current) {
+    const cy = cyRef.current;
+    if (cy) {
       updateNodeVisibility(
-        cyRef.current,
+        cy,
         minDisplayRaceCount,
         minDisplayYear,
         maxDisplayYear
       );
-      return;
+
+      cy.edges().forEach((edge: EdgeSingular) => {
+        const ctor: string = getMostCommonCtor(
+          edge.data('yearsByCtor'),
+          minDisplayYear,
+          maxDisplayYear
+        );
+        edge.data('label', ctor);
+      });
     }
   }, [minDisplayYear, maxDisplayYear, minDisplayRaceCount, elements]);
 
@@ -331,10 +358,14 @@ export default function DriverGraph() {
         selector: 'node',
         style: {
           backgroundColor: (ele: NodeSingular) =>
-            ctorColorMap[ele.data('displayCtor')] || '#0074D9',
+            ctorColorMap[ele.data('displayCtor')] || '#FFFF',
           label: 'data(codename)',
-          color: '#000',
+          color: 'white',
+          'text-outline-color': 'black',
+          'text-outline-width': 2,
           shape: 'ellipse',
+          width: DEFAULT_NODE_DIAMETER,
+          height: DEFAULT_NODE_DIAMETER,
           'text-valign': 'center',
           'text-halign': 'center',
           'font-size': '14px',
@@ -346,6 +377,10 @@ export default function DriverGraph() {
         },
       },
       {
+        selector: 'node.hovered',
+        style: {},
+      },
+      {
         selector: 'edge',
         style: {
           width: 4,
@@ -353,27 +388,32 @@ export default function DriverGraph() {
           'target-arrow-color': '#aaa',
           'font-size': 12,
           'text-rotation': 'autorotate',
+          color: 'white',
+          'text-outline-color': 'black',
+          'text-outline-width': 2,
         },
       },
       {
-        selector: '.highlighted',
+        selector: 'edge.highlighted',
         style: {
-          'background-color': '#FF4136', // typo fix: backgroundColor → background-color
-          'line-color': '#FF4136',
-          'target-arrow-color': '#FF4136',
+          width: 16,
+          label: 'data(label)',
           'transition-property': 'background-color, line-color',
           'transition-duration': '0.3s',
+          'z-index': 9999,
+          'line-color': (ele: EdgeSingular) =>
+            ctorColorMap[ele.data('label')] || '#FFFF',
         },
       },
       {
         selector: '.faded',
         style: {
-          opacity: 0.8,
-          'text-opacity': 0.8,
+          opacity: 0.6,
+          'text-opacity': 0.6,
         },
       },
     ],
-    [] // only recompute when color map changes
+    []
   );
 
   const cyStyle = useMemo(
@@ -398,7 +438,7 @@ export default function DriverGraph() {
             cyRef.current = cy;
 
             if ((cy as any)._driverGraphEventsBound !== true) {
-              (cy as any)._driverGraphEventsBound = true; // gaurd against binding duplicate listeners
+              (cy as any)._driverGraphEventsBound = true; // guard against binding duplicate listeners
 
               /* EVENT LISTENERS */
               cy.on('tap', 'edge', (event: EventObject) => {
@@ -418,7 +458,7 @@ export default function DriverGraph() {
                 );
               });
 
-              cy.on('tap', (event) => {
+              cy.on('tap', (event: EventObject) => {
                 if (event.target === cy) {
                   cy.elements().removeClass('faded highlighted');
                   setSelectedInfo(null);
@@ -437,6 +477,79 @@ export default function DriverGraph() {
                     : [...prev, driverId]
                 );
                 return;
+              });
+
+              cy.on('mouseover', 'node', (event: EventObject) => {
+                const node: NodeSingular = event.target;
+                node.connectedEdges().addClass('highlighted');
+
+                node.stop(true);
+                node.animate({
+                  style: {
+                    width: DEFAULT_NODE_DIAMETER * NODE_HOVER_SCALE,
+                    height: DEFAULT_NODE_DIAMETER * NODE_HOVER_SCALE,
+                  },
+                  duration: 150,
+                  easing: 'ease-in-out',
+                });
+
+                node.neighborhood('node').forEach((neigbor: NodeSingular) => {
+                  const edge: EdgeSingular = node.edgesWith(neigbor)[0];
+                  neigbor.animate({
+                    style: {
+                      width: DEFAULT_NODE_DIAMETER * 1.25,
+                      height: DEFAULT_NODE_DIAMETER * 1.25,
+                      backgroundColor: ctorColorMap[edge.data('label')],
+                    },
+                    duration: 150,
+                    easing: 'ease-in-out',
+                  });
+                });
+                cy.elements()
+                  .not(node.neighborhood().union(node))
+                  .addClass('faded');
+
+                // Highlight connected edges
+                node.connectedEdges().addClass('highlighted');
+              });
+
+              cy.on('mouseout', 'node', (event: EventObject) => {
+                cy.elements().removeClass('faded');
+                const node: NodeSingular = event.target;
+                node.connectedEdges().removeClass('highlighted');
+
+                node.stop(true);
+                node.animate({
+                  style: {
+                    width: DEFAULT_NODE_DIAMETER,
+                    height: DEFAULT_NODE_DIAMETER,
+                  },
+                  duration: 150,
+                  easing: 'ease-in-out',
+                });
+                node.neighborhood('node').forEach((node: NodeSingular) => {
+                  node.animate({
+                    style: {
+                      width: DEFAULT_NODE_DIAMETER,
+                      height: DEFAULT_NODE_DIAMETER,
+                      backgroundColor: ctorColorMap[node.data('displayCtor')],
+                    },
+                    duration: 150,
+                    easing: 'ease-in-out',
+                  });
+                });
+
+                node.connectedEdges().removeClass('highlighted');
+              });
+
+              cy.on('mouseover', 'edge', (event: EventObject) => {
+                const edge: EdgeSingular = event.target;
+                edge.addClass('highlighted');
+              });
+
+              cy.on('mouseout', 'edge', (event: EventObject) => {
+                const edge: EdgeSingular = event.target;
+                edge.removeClass('highlighted');
               });
             }
           }}

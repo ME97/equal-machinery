@@ -5,6 +5,7 @@ declare module 'cytoscape' {
     hide(): void;
     show(): void;
     hidden(): boolean;
+    neighbors(selector?: string): cytoscape.CollectionReturnValue;
   }
 
   interface EdgeSingular {
