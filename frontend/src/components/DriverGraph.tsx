@@ -11,6 +11,7 @@ import CytoscapeComponent from 'react-cytoscapejs';
 import coseBilkent from 'cytoscape-cose-bilkent';
 import { NodeData, EdgeData, YearsByCtor } from './types';
 import nodePositions from '../data/nodePositions.json';
+import { Range, Direction, getTrackBackground } from 'react-range';
 
 cytoscape.use(coseBilkent);
 
@@ -20,7 +21,6 @@ const DEFAULT_MAX_DISPLAY_YEAR = new Date().getFullYear();
 const DEFAULT_MIN_DISPLAY_RACE_COUNT = 10;
 const NODE_HOVER_SCALE = 1.5;
 const DEFAULT_NODE_DIAMETER = computeNodeDiameter();
-
 const ctorColorMap: Record<string, string> = {
   Ferrari: '#ff2800',
   Mercedes: '#00D7B6',
@@ -44,6 +44,7 @@ const ctorColorMap: Record<string, string> = {
   'Lotus F1': '#b39759',
   Toyota: '#db3d4b',
   Ligier: '#0056ba',
+  Minardi: '#0000',
 };
 
 /* HELPER FUNCTIONS */
@@ -291,6 +292,7 @@ export default function DriverGraph() {
           minDisplayYear,
           maxDisplayYear
         );
+
         edge.data('label', ctor);
       });
     }
@@ -371,8 +373,8 @@ export default function DriverGraph() {
           'font-size': '14px',
           'text-margin-y': '5px',
           'text-max-width': '100px',
-          'border-width': 2,
-          'border-color': '#000',
+          'border-width': 4,
+          'border-color': '#0000',
           'border-opacity': 1,
         },
       },
@@ -421,6 +423,8 @@ export default function DriverGraph() {
     []
   );
 
+  const [values, setValues] = useState([2024, 2025]); // initial slider values
+
   return (
     <div
       style={{
@@ -428,132 +432,287 @@ export default function DriverGraph() {
         height: '100vh', // full screen height
       }}
     >
-      {/* Graph */}
-      <div style={{ flex: 1 }}>
-        <CytoscapeComponent
-          elements={elements}
-          style={cyStyle}
-          stylesheet={cyStylesheet}
-          cy={(cy: Core) => {
-            cyRef.current = cy;
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        {/*Graph */}
+        <div style={{ flex: 1 }}>
+          <CytoscapeComponent
+            elements={elements}
+            style={cyStyle}
+            stylesheet={cyStylesheet}
+            cy={(cy: Core) => {
+              cyRef.current = cy;
 
-            if ((cy as any)._driverGraphEventsBound !== true) {
-              (cy as any)._driverGraphEventsBound = true; // guard against binding duplicate listeners
+              if ((cy as any)._driverGraphEventsBound !== true) {
+                (cy as any)._driverGraphEventsBound = true; // guard against binding duplicate listeners
 
-              /* EVENT LISTENERS */
-              cy.on('tap', 'edge', (event: EventObject) => {
-                const edge = event.target;
-                const source = edge.source().data('name') || edge.source().id();
-                const target = edge.target().data('name') || edge.target().id();
-                const label = edge
-                  .data('yearsByCtor')
-                  .map(
-                    (pair: YearsByCtor) =>
-                      `${pair.ctor}[${pair.years.join(' ,')}]`
-                  )
-                  .join(', ');
+                /* EVENT LISTENERS */
+                cy.on('tap', 'edge', (event: EventObject) => {
+                  const edge: EdgeSingular = event.target;
+                  const source: string =
+                    edge.source().data('name') || edge.source().id();
+                  const target: string =
+                    edge.target().data('name') || edge.target().id();
+                  const label = edge
+                    .data('yearsByCtor')
+                    .map(
+                      (pair: YearsByCtor) =>
+                        `${pair.ctor}[${pair.years.join(' ,')}]`
+                    )
+                    .join(', ');
 
-                setSelectedInfo(
-                  `${source} & ${target} were teammates at ${label}`
-                );
-              });
-
-              cy.on('tap', (event: EventObject) => {
-                if (event.target === cy) {
-                  cy.elements().removeClass('faded highlighted');
-                  setSelectedInfo(null);
-                  setSelectedDrivers([]);
-                }
-              });
-
-              cy.on('tap', 'node', (event: EventObject) => {
-                const node = event.target;
-                const driverId = node.id();
-
-                // toggle driver selection
-                setSelectedDrivers((prev) =>
-                  prev.includes(driverId)
-                    ? prev.filter((item) => item !== driverId)
-                    : [...prev, driverId]
-                );
-                return;
-              });
-
-              cy.on('mouseover', 'node', (event: EventObject) => {
-                const node: NodeSingular = event.target;
-                node.connectedEdges().addClass('highlighted');
-
-                node.stop(true);
-                node.animate({
-                  style: {
-                    width: DEFAULT_NODE_DIAMETER * NODE_HOVER_SCALE,
-                    height: DEFAULT_NODE_DIAMETER * NODE_HOVER_SCALE,
-                  },
-                  duration: 150,
-                  easing: 'ease-in-out',
+                  setSelectedInfo(
+                    `${source} & ${target} were teammates at ${label}`
+                  );
                 });
 
-                node.neighborhood('node').forEach((neigbor: NodeSingular) => {
-                  const edge: EdgeSingular = node.edgesWith(neigbor)[0];
-                  neigbor.animate({
+                cy.on('tap', (event: EventObject) => {
+                  if (event.target === cy) {
+                    cy.elements().removeClass('faded highlighted');
+                    setSelectedInfo(null);
+                    setSelectedDrivers([]);
+                  }
+                });
+
+                cy.on('tap', 'node', (event: EventObject) => {
+                  const node = event.target;
+                  const driverId = node.id();
+
+                  // toggle driver selection
+                  setSelectedDrivers((prev) =>
+                    prev.includes(driverId)
+                      ? prev.filter((item) => item !== driverId)
+                      : [...prev, driverId]
+                  );
+                  return;
+                });
+
+                cy.on('mouseover', 'node', (event: EventObject) => {
+                  const node: NodeSingular = event.target;
+                  node.connectedEdges().addClass('highlighted');
+
+                  node.stop(true);
+                  node.animate({
                     style: {
-                      width: DEFAULT_NODE_DIAMETER * 1.25,
-                      height: DEFAULT_NODE_DIAMETER * 1.25,
-                      backgroundColor: ctorColorMap[edge.data('label')],
+                      width: DEFAULT_NODE_DIAMETER * NODE_HOVER_SCALE,
+                      height: DEFAULT_NODE_DIAMETER * NODE_HOVER_SCALE,
                     },
                     duration: 150,
                     easing: 'ease-in-out',
                   });
+
+                  node.neighborhood('node').forEach((neigbor: NodeSingular) => {
+                    const edge: EdgeSingular = node.edgesWith(neigbor)[0];
+                    neigbor.stop(true);
+                    neigbor.animate({
+                      style: {
+                        width: DEFAULT_NODE_DIAMETER * 1.25,
+                        height: DEFAULT_NODE_DIAMETER * 1.25,
+                        backgroundColor: ctorColorMap[edge.data('label')],
+                      },
+                      duration: 150,
+                      easing: 'ease-in-out',
+                    });
+                  });
+                  cy.elements()
+                    .not(node.neighborhood().union(node))
+                    .addClass('faded');
+
+                  // Highlight connected edges
+                  node.connectedEdges().addClass('highlighted');
                 });
-                cy.elements()
-                  .not(node.neighborhood().union(node))
-                  .addClass('faded');
 
-                // Highlight connected edges
-                node.connectedEdges().addClass('highlighted');
-              });
+                cy.on('mouseout', 'node', (event: EventObject) => {
+                  cy.elements().removeClass('faded');
+                  const node: NodeSingular = event.target;
+                  node.connectedEdges().removeClass('highlighted');
 
-              cy.on('mouseout', 'node', (event: EventObject) => {
-                cy.elements().removeClass('faded');
-                const node: NodeSingular = event.target;
-                node.connectedEdges().removeClass('highlighted');
-
-                node.stop(true);
-                node.animate({
-                  style: {
-                    width: DEFAULT_NODE_DIAMETER,
-                    height: DEFAULT_NODE_DIAMETER,
-                  },
-                  duration: 150,
-                  easing: 'ease-in-out',
-                });
-                node.neighborhood('node').forEach((node: NodeSingular) => {
+                  node.stop(true);
                   node.animate({
                     style: {
                       width: DEFAULT_NODE_DIAMETER,
                       height: DEFAULT_NODE_DIAMETER,
-                      backgroundColor: ctorColorMap[node.data('displayCtor')],
                     },
                     duration: 150,
                     easing: 'ease-in-out',
                   });
+                  node.neighborhood('node').forEach((node: NodeSingular) => {
+                    node.stop(true);
+                    node.animate({
+                      style: {
+                        width: DEFAULT_NODE_DIAMETER,
+                        height: DEFAULT_NODE_DIAMETER,
+                        backgroundColor: ctorColorMap[node.data('displayCtor')],
+                      },
+                      duration: 150,
+                      easing: 'ease-in-out',
+                    });
+                  });
+
+                  node.animate({
+                    style: {
+                      backgroundColor: ctorColorMap[node.data('displayCtor')],
+                    },
+                    duration: 150,
+                  });
+                  node.connectedEdges().removeClass('highlighted');
                 });
 
-                node.connectedEdges().removeClass('highlighted');
-              });
+                cy.on('mouseover', 'edge', (event: EventObject) => {
+                  const edge: EdgeSingular = event.target;
+                  edge.connectedNodes().forEach((node: NodeSingular) => {
+                    node.stop(true);
+                    node.animate({
+                      style: {
+                        width: DEFAULT_NODE_DIAMETER * 1.25,
+                        height: DEFAULT_NODE_DIAMETER * 1.25,
+                        backgroundColor: ctorColorMap[edge.data('label')],
+                      },
+                      duration: 150,
+                      easing: 'ease-in-out',
+                    });
+                  });
+                  edge.addClass('highlighted');
+                });
 
-              cy.on('mouseover', 'edge', (event: EventObject) => {
-                const edge: EdgeSingular = event.target;
-                edge.addClass('highlighted');
-              });
+                cy.on('mouseout', 'edge', (event: EventObject) => {
+                  const edge: EdgeSingular = event.target;
+                  edge.connectedNodes().forEach((node: NodeSingular) => {
+                    node.stop(true);
+                    node.animate({
+                      style: {
+                        width: DEFAULT_NODE_DIAMETER,
+                        height: DEFAULT_NODE_DIAMETER,
+                        backgroundColor: ctorColorMap[node.data('displayCtor')],
+                      },
+                      duration: 150,
+                      easing: 'ease-in-out',
+                    });
+                  });
+                  edge.removeClass('highlighted');
+                });
+              }
+            }}
+          />
+        </div>
 
-              cy.on('mouseout', 'edge', (event: EventObject) => {
-                const edge: EdgeSingular = event.target;
-                edge.removeClass('highlighted');
-              });
-            }
+        {/* Timeline Slider */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            height: '10%',
+            flexDirection: 'column',
+            width: '100%',
+            justifyContent: 'center',
+            flexWrap: 'wrap',
+            backgroundColor: '#f4f4f4',
           }}
-        />
+        >
+          <Range
+            draggableTrack
+            direction={Direction.Right}
+            values={values}
+            step={1}
+            min={1970}
+            max={2025}
+            onChange={(values) => {
+              setMinDisplayYear(values[0]);
+              setMaxDisplayYear(values[1]);
+              setValues(values);
+            }}
+            renderMark={({ props, index }) => (
+              <div
+                {...props}
+                key={props.key}
+                style={{
+                  ...props.style,
+                  width: '5px',
+                  height: index % 5 === 0 ? '30px' : '20px',
+                  backgroundColor:
+                    values[0] <= index + 1970 && index + 1970 <= values[1]
+                      ? '#548BF4'
+                      : '#ccc',
+                }}
+              />
+            )}
+            renderTrack={({ props, children }) => (
+              <div
+                onMouseDown={props.onMouseDown}
+                onTouchStart={props.onTouchStart}
+                style={{
+                  ...props.style,
+                  flexGrow: 1,
+                  width: '90%',
+                  display: 'flex',
+                  height: '36px',
+                }}
+              >
+                <div
+                  ref={props.ref}
+                  style={{
+                    width: '100%',
+                    height: '5px',
+                    borderRadius: '4px',
+                    background: getTrackBackground({
+                      values,
+                      colors: ['#ccc', '#548BF4', '#ccc'],
+                      min: 1970,
+                      max: 2025,
+                    }),
+                    alignSelf: 'center',
+                  }}
+                >
+                  {children}
+                </div>
+              </div>
+            )}
+            renderThumb={({ index, props, isDragged }) => (
+              <div
+                {...props}
+                key={props.key}
+                style={{
+                  ...props.style,
+                  height: '42px',
+                  width: '42px',
+                  borderRadius: '4px',
+                  backgroundColor: '#FFF',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  boxShadow: '0px 2px 6px #AAA',
+                }}
+              >
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '-28px',
+                    color: '#fff',
+                    fontWeight: 'bold',
+                    fontSize: '14px',
+                    fontFamily: 'Arial,Helvetica Neue,Helvetica,sans-serif',
+                    padding: '4px',
+                    borderRadius: '4px',
+                    backgroundColor: '#548BF4',
+                  }}
+                >
+                  {values[index]}
+                </div>
+                <div
+                  style={{
+                    width: '16px',
+                    height: '5px',
+                    backgroundColor: isDragged ? '#548BF4' : '#CCC',
+                  }}
+                />
+              </div>
+            )}
+          />
+          {/* {
+          <output style={{ marginTop: '50px', width: '56px' }} id="output">
+            {values[0].toFixed(1)}
+          </output>
+        } */}
+        </div>
       </div>
 
       {/* Display Panel*/}
