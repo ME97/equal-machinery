@@ -141,7 +141,7 @@ def to_cytoscape_data(
                         "codename": driver.codename,
                         "forename": driver.forename,
                         "surname": driver.surname,
-                        "yearsActive": sorted(list(driver.years_active)),
+                        # "yearsActive": sorted(list(driver.years_active)), Not using for now, because same info in yearsByCtor
                         "yearsByCtor": sorted(
                             [
                                 {

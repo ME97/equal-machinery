@@ -16,7 +16,7 @@ import { Range, Direction, getTrackBackground } from 'react-range';
 cytoscape.use(coseBilkent);
 
 /* GLOBAL CONSTANTS */
-const DEFAULT_MIN_DISPLAY_YEAR = 2024;
+const DEFAULT_MIN_DISPLAY_YEAR = 2020;
 const DEFAULT_MAX_DISPLAY_YEAR = new Date().getFullYear();
 const DEFAULT_MIN_DISPLAY_RACE_COUNT = 10;
 const NODE_HOVER_SCALE = 1.5;
@@ -97,15 +97,21 @@ function updateNodeVisibility(
       maxYear
     );
     node.data('displayCtor', ctor);
+    node.stop(true);
+    node.animate({
+      style: {
+        backgroundColor: ctorColorMap[node.data('displayCtor')],
+      },
+      duration: 150,
+    });
 
-    const yearsActive: number[] = node.data('yearsActive');
-    const raceCount: number = node.data('raceCount');
-
-    const visible =
-      yearsActive.some((year) => minYear <= year && year <= maxYear) &&
-      raceCount >= minRaceCount;
-
-    if (visible) {
+    const yearsByCtor: YearsByCtor[] = node.data('yearsByCtor');
+    if (
+      node.data('raceCount') >= minRaceCount &&
+      yearsByCtor.some((ctor) =>
+        ctor.years.some((year) => minYear <= year && year <= maxYear)
+      )
+    ) {
       node.show();
     } else {
       node.hide();
@@ -113,7 +119,6 @@ function updateNodeVisibility(
   });
   cy.fit(cy.elements(':visible'), 30); // fit to visible elements
   const fitZoom = cy.zoom();
-  console.log(cy.zoom());
   cy.minZoom(fitZoom * 0.85);
   cy.maxZoom(fitZoom * 5);
 }
@@ -143,6 +148,7 @@ export default function DriverGraph() {
   const [minDisplayRaceCount, setMinDisplayRaceCount] = useState(
     DEFAULT_MIN_DISPLAY_RACE_COUNT
   );
+  const [singleYearMode, setSingleYearMode] = useState<boolean>(false);
   const cyRef = useRef<Core | null>(null);
 
   // saves current node positions to JSON file.
@@ -157,9 +163,9 @@ export default function DriverGraph() {
     }, {} as Record<string, { x: number; y: number }>);
 
     // Print to console so you can copy/paste into a JSON file
-    console.log(JSON.stringify(positions, null, 2));
+    // console.log(JSON.stringify(positions, null, 2));
 
-    // Optional: download as JSON file directly
+    // Download as JSON file directly
     const blob = new Blob([JSON.stringify(positions, null, 2)], {
       type: 'application/json',
     });
@@ -184,11 +190,19 @@ export default function DriverGraph() {
     if (cyRef.current && elements.length > 0) {
       const cy = cyRef.current;
 
-      // use preset positions
-      cy.layout({
+      const layout = cy.layout({
         name: 'preset',
         positions: nodePositions,
-      }).run();
+      });
+
+      layout.on('layoutstop', () => {
+        cy.fit(cy.elements(':visible'), 30);
+        const fitZoom = cy.zoom();
+        cy.minZoom(fitZoom * 0.85);
+        cy.maxZoom(fitZoom * 5);
+      });
+
+      layout.run();
 
       // cose-bilkent default options
       // const coseBilkentDefaultOptions = {
@@ -423,7 +437,7 @@ export default function DriverGraph() {
     []
   );
 
-  const [values, setValues] = useState([2024, 2025]); // initial slider values
+  const [sliderThumbValues, setSliderThumbValues] = useState([2020, 2025]); // initial slider values
 
   return (
     <div
@@ -433,7 +447,7 @@ export default function DriverGraph() {
       }}
     >
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        {/*Graph */}
+        {/* Graph */}
         <div style={{ flex: 1 }}>
           <CytoscapeComponent
             elements={elements}
@@ -599,26 +613,41 @@ export default function DriverGraph() {
         <div
           style={{
             display: 'flex',
-            alignItems: 'center',
-            height: '10%',
             flexDirection: 'column',
-            width: '100%',
             justifyContent: 'center',
             flexWrap: 'wrap',
+            alignItems: 'center',
+            height: '10%',
+            width: '100%',
             backgroundColor: '#f4f4f4',
           }}
         >
           <Range
-            draggableTrack
+            draggableTrack={true}
             direction={Direction.Right}
-            values={values}
+            values={sliderThumbValues}
             step={1}
             min={1970}
             max={2025}
-            onChange={(values) => {
-              setMinDisplayYear(values[0]);
-              setMaxDisplayYear(values[1]);
-              setValues(values);
+            onChange={(newValues) => {
+              // setMinDisplayYear(newValues[0]);
+              // setMaxDisplayYear(newValues[1]);
+              // setValues(newValues);
+
+              // TODO: Add useEffect for singleYearMode
+              //  -> change some settings so it works correctly
+              // -> collapse to min or max year
+              //    - refresh graph positions
+              //    -
+              if (singleYearMode) {
+                setMinDisplayYear(newValues[0]);
+                setMaxDisplayYear(newValues[0]);
+                setSliderThumbValues([newValues[0], newValues[0]]);
+              } else {
+                setMinDisplayYear(newValues[0]);
+                setMaxDisplayYear(newValues[1]);
+                setSliderThumbValues(newValues);
+              }
             }}
             renderMark={({ props, index }) => (
               <div
@@ -629,7 +658,7 @@ export default function DriverGraph() {
                   width: '5px',
                   height: index % 5 === 0 ? '30px' : '20px',
                   backgroundColor:
-                    values[0] <= index + 1970 && index + 1970 <= values[1]
+                    sliderThumbValues[0] <= index + 1970 && index + 1970 <= sliderThumbValues[1]
                       ? '#548BF4'
                       : '#ccc',
                 }}
@@ -654,7 +683,7 @@ export default function DriverGraph() {
                     height: '5px',
                     borderRadius: '4px',
                     background: getTrackBackground({
-                      values,
+                      values: sliderThumbValues,
                       colors: ['#ccc', '#548BF4', '#ccc'],
                       min: 1970,
                       max: 2025,
@@ -695,7 +724,7 @@ export default function DriverGraph() {
                     backgroundColor: '#548BF4',
                   }}
                 >
-                  {values[index]}
+                  {sliderThumbValues[index]}
                 </div>
                 <div
                   style={{
@@ -707,11 +736,12 @@ export default function DriverGraph() {
               </div>
             )}
           />
-          {/* {
-          <output style={{ marginTop: '50px', width: '56px' }} id="output">
-            {values[0].toFixed(1)}
-          </output>
-        } */}
+          <button
+            onClick={() => setSingleYearMode((m) => !m)}
+            className="px-4 py-2 rounded bg-blue-500 text-white"
+          >
+            {singleYearMode ? 'Switch to Year Range' : 'Switch to Single Year'}
+          </button>
         </div>
       </div>
 

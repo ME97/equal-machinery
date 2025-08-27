@@ -77,10 +77,10 @@ class Race(MyBaseModel):
 
 class Ctor(MyBaseModel):
     constructor_id: int
-    constructor_ref: str
-    name: str
+    constructor_ref: str # one word identifier e.g. 'alpine'
+    name: str # full name e.g. 'Alpine F1 Team'
     nationality: str
-    driver_pair_ids: set[tuple[int, int, int]] = Field(default_factory=set)
+    driver_pair_ids: set[tuple[int, int]] = Field(default_factory=set)
     colour: str | None
 
 
