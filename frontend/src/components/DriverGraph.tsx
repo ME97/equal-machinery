@@ -21,6 +21,8 @@ const DEFAULT_MAX_DISPLAY_YEAR = new Date().getFullYear();
 const DEFAULT_MIN_DISPLAY_RACE_COUNT = 10;
 const NODE_HOVER_SCALE = 1.5;
 const DEFAULT_NODE_DIAMETER = computeNodeDiameter();
+const TIMELINE_MIN_YEAR = 1970;
+const TIMELINE_MAX_YEAR = new Date().getFullYear();
 const ctorColorMap: Record<string, string> = {
   Ferrari: '#ff2800',
   Mercedes: '#00D7B6',
@@ -220,7 +222,7 @@ export default function DriverGraph() {
       //   // Node repulsion (non overlapping) multiplier (default 4500, might need to bump higher with more nodes)
       //   nodeRepulsion: 1000,
       //   // Ideal (intra-graph) edge length
-      //   idealEdgeLength: 150,
+      //   idealEdgeLength: 200,
       //   // Divisor to compute edge forces
       //   edgeElasticity: 0.45,
       //   // Nesting factor (multiplier) to compute ideal edge length for inter-graph edges
@@ -248,10 +250,10 @@ export default function DriverGraph() {
       //   // Initial cooling factor for incremental layout
       //   initialEnergyOnIncremental: 0.5,
       //   spacingFactor: 1.25,
-      //   nodeOverlap: diameter,
+      //   // nodeOverlap: diameter,
       // };
 
-      // layout using force directed algorithm (slow for entire graph)
+      // // layout using force directed algorithm (slow for entire graph)
       // cy.layout({
       //   name: 'cose-bilkent',
       //   ...coseBilkentDefaultOptions,
@@ -457,6 +459,13 @@ export default function DriverGraph() {
               if ((cy as any)._driverGraphEventsBound !== true) {
                 (cy as any)._driverGraphEventsBound = true; // guard against binding duplicate listeners
 
+                cy.on('grab', 'node', (e) => console.log('grab', e));
+                cy.on('drag', 'node', (e) => console.log('drag', e));
+                cy.on('free', 'node', (e) => console.log('free', e));
+                cy.on('position', 'node', (e) =>
+                  console.log('position', e.target.position())
+                );
+
                 /* EVENT LISTENERS */
                 cy.on('tap', 'edge', (event: EventObject) => {
                   const edge: EdgeSingular = event.target;
@@ -502,11 +511,22 @@ export default function DriverGraph() {
                   const node: NodeSingular = event.target;
                   node.connectedEdges().addClass('highlighted');
 
+                  // TODO: This is an attempted hack to render edges above other edges
+                  //    - it is not working. Need to look into cytoscape.js repo
+                  // (node as any)._private.grabbed = true; // <-- hack: mark as grabbed
+                  // (node as any)._private.active = true;
+                  (node as any)._private.rscratch.inDragLayer = true;
+                  node.neighborhood().forEach((edge: any) => {
+                    edge._private.rscratch.inDragLayer = true;
+                  });
+                  // cy.forceRender();
+
                   node.stop(true);
                   node.animate({
                     style: {
                       width: DEFAULT_NODE_DIAMETER * NODE_HOVER_SCALE,
                       height: DEFAULT_NODE_DIAMETER * NODE_HOVER_SCALE,
+                      backgroundColor: ctorColorMap[node.data('displayCtor')],
                     },
                     duration: 150,
                     easing: 'ease-in-out',
@@ -537,6 +557,13 @@ export default function DriverGraph() {
                   cy.elements().removeClass('faded');
                   const node: NodeSingular = event.target;
                   node.connectedEdges().removeClass('highlighted');
+
+
+                  // TODO: This is a hack. Try to find proper way to do it
+                  (node as any)._private.rscratch.inDragLayer = false;
+                  node.neighborhood().forEach((edge: any) => {
+                    edge._private.rscratch.inDragLayer = false;
+                  });
 
                   node.stop(true);
                   node.animate({
@@ -619,6 +646,7 @@ export default function DriverGraph() {
         }
       `}
         </style>
+
         {/* Timeline Slider */}
         <div
           style={{
@@ -628,8 +656,13 @@ export default function DriverGraph() {
             flexWrap: 'wrap',
             alignItems: 'center',
             height: '15%',
-            width: '100%',
-            backgroundColor: '#f4f4f4',
+            width: '80%',
+
+            // settings to allow timeline to float over graph
+            background: 'transparent',
+            position: 'absolute',
+            bottom: '0px',
+            left: '20px',
           }}
         >
           <Range
@@ -638,24 +671,19 @@ export default function DriverGraph() {
             direction={Direction.Right}
             values={sliderThumbValues}
             step={1}
-            min={1970}
-            max={2025}
+            min={TIMELINE_MIN_YEAR}
+            max={TIMELINE_MAX_YEAR}
             onChange={(newValues) => {
               if (newValues[0] > newValues[1]) {
                 if (newValues[0] === sliderThumbValues[0]) {
-                  setMinDisplayYear(newValues[1]);
-                  setMaxDisplayYear(newValues[1]);
-                  setSliderThumbValues([newValues[1], newValues[1]]);
+                  newValues[0] = newValues[1];
                 } else {
-                  setMinDisplayYear(newValues[0]);
-                  setMaxDisplayYear(newValues[0]);
-                  setSliderThumbValues([newValues[0], newValues[0]]);
+                  newValues[1] = newValues[0];
                 }
-              } else {
-                setMinDisplayYear(newValues[0]);
-                setMaxDisplayYear(newValues[1]);
-                setSliderThumbValues(newValues);
               }
+              setMinDisplayYear(newValues[0]);
+              setMaxDisplayYear(newValues[1]);
+              setSliderThumbValues(newValues);
             }}
             renderMark={({ props, index }) => (
               <div
@@ -666,8 +694,8 @@ export default function DriverGraph() {
                   width: '5px',
                   height: index % 5 === 0 ? '30px' : '20px',
                   backgroundColor:
-                    sliderThumbValues[0] <= index + 1970 &&
-                    index + 1970 <= sliderThumbValues[1]
+                    sliderThumbValues[0] <= index + TIMELINE_MIN_YEAR &&
+                    index + TIMELINE_MIN_YEAR <= sliderThumbValues[1]
                       ? 'black'
                       : '#ccc',
                 }}
@@ -694,8 +722,8 @@ export default function DriverGraph() {
                     background: getTrackBackground({
                       values: sliderThumbValues,
                       colors: ['#ccc', 'black', '#ccc'],
-                      min: 1970,
-                      max: 2025,
+                      min: TIMELINE_MIN_YEAR,
+                      max: TIMELINE_MAX_YEAR,
                     }),
                     alignSelf: 'center',
                   }}
@@ -752,7 +780,7 @@ export default function DriverGraph() {
       {/* Display Panel*/}
       <div
         style={{
-          width: '25%', // quarter width
+          width: '15%', // quarter width
           backgroundColor: '#fafafa',
           borderLeft: '1px solid #ddd',
           padding: '1rem',
@@ -771,7 +799,7 @@ export default function DriverGraph() {
         </h2>
         {selectedInfo}
         <button onClick={savePositions}>Save Positions</button>
-        <div style={{ marginBottom: '1rem' }}>
+        {/* <div style={{ marginBottom: '1rem' }}>
           <label>Min Value:</label>
           <input
             type="number"
@@ -799,7 +827,7 @@ export default function DriverGraph() {
             }}
             style={{ width: '25%', padding: '0.5rem', marginTop: '0.25rem' }}
           />
-        </div>
+        </div> */}
       </div>
     </div>
   );
