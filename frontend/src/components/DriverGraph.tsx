@@ -148,7 +148,7 @@ export default function DriverGraph() {
   const [minDisplayRaceCount, setMinDisplayRaceCount] = useState(
     DEFAULT_MIN_DISPLAY_RACE_COUNT
   );
-  const [singleYearMode, setSingleYearMode] = useState<boolean>(false);
+  const [sliderThumbValues, setSliderThumbValues] = useState([2020, 2025]); // initial slider values
   const cyRef = useRef<Core | null>(null);
 
   // saves current node positions to JSON file.
@@ -437,8 +437,6 @@ export default function DriverGraph() {
     []
   );
 
-  const [sliderThumbValues, setSliderThumbValues] = useState([2020, 2025]); // initial slider values
-
   return (
     <div
       style={{
@@ -609,6 +607,18 @@ export default function DriverGraph() {
           />
         </div>
 
+        {/* Styling to prevent timeline thumbs from highlighting */}
+        <style>
+          {`
+        .react-range__thumb {
+          outline: none;
+        }
+
+        .react-range__thumb:focus-visible {
+          outline: auto;
+        }
+      `}
+        </style>
         {/* Timeline Slider */}
         <div
           style={{
@@ -617,32 +627,30 @@ export default function DriverGraph() {
             justifyContent: 'center',
             flexWrap: 'wrap',
             alignItems: 'center',
-            height: '10%',
+            height: '15%',
             width: '100%',
             backgroundColor: '#f4f4f4',
           }}
         >
           <Range
-            draggableTrack={true}
+            allowOverlap={true}
+            draggableTrack={true} // enabling this means can't click track to go to year
             direction={Direction.Right}
             values={sliderThumbValues}
             step={1}
             min={1970}
             max={2025}
             onChange={(newValues) => {
-              // setMinDisplayYear(newValues[0]);
-              // setMaxDisplayYear(newValues[1]);
-              // setValues(newValues);
-
-              // TODO: Add useEffect for singleYearMode
-              //  -> change some settings so it works correctly
-              // -> collapse to min or max year
-              //    - refresh graph positions
-              //    -
-              if (singleYearMode) {
-                setMinDisplayYear(newValues[0]);
-                setMaxDisplayYear(newValues[0]);
-                setSliderThumbValues([newValues[0], newValues[0]]);
+              if (newValues[0] > newValues[1]) {
+                if (newValues[0] === sliderThumbValues[0]) {
+                  setMinDisplayYear(newValues[1]);
+                  setMaxDisplayYear(newValues[1]);
+                  setSliderThumbValues([newValues[1], newValues[1]]);
+                } else {
+                  setMinDisplayYear(newValues[0]);
+                  setMaxDisplayYear(newValues[0]);
+                  setSliderThumbValues([newValues[0], newValues[0]]);
+                }
               } else {
                 setMinDisplayYear(newValues[0]);
                 setMaxDisplayYear(newValues[1]);
@@ -658,8 +666,9 @@ export default function DriverGraph() {
                   width: '5px',
                   height: index % 5 === 0 ? '30px' : '20px',
                   backgroundColor:
-                    sliderThumbValues[0] <= index + 1970 && index + 1970 <= sliderThumbValues[1]
-                      ? '#548BF4'
+                    sliderThumbValues[0] <= index + 1970 &&
+                    index + 1970 <= sliderThumbValues[1]
+                      ? 'black'
                       : '#ccc',
                 }}
               />
@@ -684,7 +693,7 @@ export default function DriverGraph() {
                     borderRadius: '4px',
                     background: getTrackBackground({
                       values: sliderThumbValues,
-                      colors: ['#ccc', '#548BF4', '#ccc'],
+                      colors: ['#ccc', 'black', '#ccc'],
                       min: 1970,
                       max: 2025,
                     }),
@@ -702,46 +711,41 @@ export default function DriverGraph() {
                 style={{
                   ...props.style,
                   height: '42px',
-                  width: '42px',
+                  width: '5px',
                   borderRadius: '4px',
-                  backgroundColor: '#FFF',
+                  backgroundColor: 'black',
                   display: 'flex',
                   justifyContent: 'center',
                   alignItems: 'center',
                   boxShadow: '0px 2px 6px #AAA',
+                  top: index === 0 ? '65%' : '35%',
                 }}
               >
                 <div
                   style={{
                     position: 'absolute',
-                    top: '-28px',
+                    top: index === 0 ? '30px' : '-13px', // TODO: get rid of hardcoded vals
                     color: '#fff',
                     fontWeight: 'bold',
                     fontSize: '14px',
                     fontFamily: 'Arial,Helvetica Neue,Helvetica,sans-serif',
                     padding: '4px',
                     borderRadius: '4px',
-                    backgroundColor: '#548BF4',
+                    backgroundColor: 'black',
                   }}
                 >
                   {sliderThumbValues[index]}
                 </div>
-                <div
+                {/* <div
                   style={{
                     width: '16px',
                     height: '5px',
                     backgroundColor: isDragged ? '#548BF4' : '#CCC',
                   }}
-                />
+                /> */}
               </div>
             )}
           />
-          <button
-            onClick={() => setSingleYearMode((m) => !m)}
-            className="px-4 py-2 rounded bg-blue-500 text-white"
-          >
-            {singleYearMode ? 'Switch to Year Range' : 'Switch to Single Year'}
-          </button>
         </div>
       </div>
 

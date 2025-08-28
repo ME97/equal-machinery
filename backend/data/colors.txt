@@ -1,0 +1,21 @@
+BMW Sauber #FFFFFF, #16588E white and yale blue
+Renaut #f7d747 energy yellow
+Toro Rosso #00144A, #EC0742  Dark Blue, Red
+Ferrari #EF1A2D Vivid Red
+Toyota # EB0A1E, # FFFFFF Toyota Red and white
+Super Aguri # FFFFFF, #e20010 White and red
+Force India #00A85C, #F27836 Dark cyan - lime green, Bright orange
+Honda # FFFFFF white
+Spyker #F1C31E, #C0C0C0 Dutch Orange, Silver
+BAR #E30613, #A3A47D Lucky Strike Red. Lucky Strike Khaki (because its very important that cigarette brands have trademarked colours)
+Jordan #FFDD00, #000000 Golden Yellow, Black
+Minardi #FFFF00 Bright Yellow
+Jaguar #004225 British Racing Green
+Prost #003B5C Prussian Blue
+Arrows #FF6600, #FF6600, light beige, Bright Orange
+BENNETON #008860 SPANISH VIRIDIAN
+BRAWN # FFFFFF , #D1E200 WHITE, LIME YELLOW
+STEWART #FFFFFF, #2F4198 white, PIGMENT BLUE
+
+
+
