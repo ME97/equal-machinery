@@ -1,28 +1,28 @@
-constructorId,constructorRef,name,nationality,url,colour
-1,"mclaren","McLaren","British","http://en.wikipedia.org/wiki/McLaren","#F47600"
-2,"bmw_sauber","BMW Sauber","German","http://en.wikipedia.org/wiki/BMW_Sauber"
-3,"williams","Williams","British","http://en.wikipedia.org/wiki/Williams_Grand_Prix_Engineering","#1868DB"
-4,"renault","Renault","French","http://en.wikipedia.org/wiki/Renault_in_Formula_One"
-5,"toro_rosso","Toro Rosso","Italian","http://en.wikipedia.org/wiki/Scuderia_Toro_Rosso"
-6,"ferrari","Ferrari","Italian","http://en.wikipedia.org/wiki/Scuderia_Ferrari"
-7,"toyota","Toyota","Japanese","http://en.wikipedia.org/wiki/Toyota_Racing"
-8,"super_aguri","Super Aguri","Japanese","http://en.wikipedia.org/wiki/Super_Aguri_F1"
-9,"red_bull","Red Bull","Austrian","http://en.wikipedia.org/wiki/Red_Bull_Racing","#4781D7"
-10,"force_india","Force India","Indian","http://en.wikipedia.org/wiki/Racing_Point_Force_India"
-11,"honda","Honda","Japanese","http://en.wikipedia.org/wiki/Honda_Racing_F1"
-12,"spyker","Spyker","Dutch","http://en.wikipedia.org/wiki/Spyker_F1"
-13,"mf1","MF1","Russian","http://en.wikipedia.org/wiki/Midland_F1_Racing"
+constructorId,constructorRef,name,nationality,url,colorPrimary,colorSecondary
+1,"mclaren","McLaren","British","http://en.wikipedia.org/wiki/McLaren",#F47600,#000000
+2,"bmw_sauber","BMW Sauber","German","http://en.wikipedia.org/wiki/BMW_Sauber",#FFFFFF,#16588E
+3,"williams","Williams","British","http://en.wikipedia.org/wiki/Williams_Grand_Prix_Engineering",#1868DB
+4,"renault","Renault","French","http://en.wikipedia.org/wiki/Renault_in_Formula_One",#f7d747,#000000
+5,"toro_rosso","Toro Rosso","Italian","http://en.wikipedia.org/wiki/Scuderia_Toro_Rosso",#00144A,#EC0742
+6,"ferrari","Ferrari","Italian","http://en.wikipedia.org/wiki/Scuderia_Ferrari",#EF1A2D
+7,"toyota","Toyota","Japanese","http://en.wikipedia.org/wiki/Toyota_Racing",#EB0A1E,#FFFFFF
+8,"super_aguri","Super Aguri","Japanese","http://en.wikipedia.org/wiki/Super_Aguri_F1",#FFFFFF,#e20010
+9,"red_bull","Red Bull","Austrian","http://en.wikipedia.org/wiki/Red_Bull_Racing",#121F45,#FF004C
+10,"force_india","Force India","Indian","http://en.wikipedia.org/wiki/Racing_Point_Force_India",#00A85C,#F27836
+11,"honda","Honda","Japanese","http://en.wikipedia.org/wiki/Honda_Racing_F1",#FFFFFF,#f30f34
+12,"spyker","Spyker","Dutch","http://en.wikipedia.org/wiki/Spyker_F1",#F1C31E,#C0C0C0
+13,"mf1","MF1","Russian","http://en.wikipedia.org/wiki/Midland_F1_Racing",#ff0000,#333333
 14,"spyker_mf1","Spyker MF1","Dutch","http://en.wikipedia.org/wiki/Midland_F1_Racing"
-15,"sauber","Sauber","Swiss","http://en.wikipedia.org/wiki/Sauber_Motorsport","#01C00E"
-16,"bar","BAR","British","http://en.wikipedia.org/wiki/British_American_Racing"
-17,"jordan","Jordan","Irish","http://en.wikipedia.org/wiki/Jordan_Grand_Prix"
-18,"minardi","Minardi","Italian","http://en.wikipedia.org/wiki/Minardi"
-19,"jaguar","Jaguar","British","http://en.wikipedia.org/wiki/Jaguar_Racing"
-20,"prost","Prost","French","http://en.wikipedia.org/wiki/Prost_Grand_Prix"
-21,"arrows","Arrows","British","http://en.wikipedia.org/wiki/Arrows_Grand_Prix_International"
-22,"benetton","Benetton","Italian","http://en.wikipedia.org/wiki/Benetton_Formula"
-23,"brawn","Brawn","British","http://en.wikipedia.org/wiki/Brawn_GP"
-24,"stewart","Stewart","British","http://en.wikipedia.org/wiki/Stewart_Grand_Prix"
+15,"sauber","Sauber","Swiss","http://en.wikipedia.org/wiki/Sauber_Motorsport",#01C00E
+16,"bar","BAR","British","http://en.wikipedia.org/wiki/British_American_Racing",#F1C31E,#C0C0C0
+17,"jordan","Jordan","Irish","http://en.wikipedia.org/wiki/Jordan_Grand_Prix",#FFDD00,#000000
+18,"minardi","Minardi","Italian","http://en.wikipedia.org/wiki/Minardi",#FFFF00
+19,"jaguar","Jaguar","British","http://en.wikipedia.org/wiki/Jaguar_Racing",#004225
+20,"prost","Prost","French","http://en.wikipedia.org/wiki/Prost_Grand_Prix",#003B5C
+21,"arrows","Arrows","British","http://en.wikipedia.org/wiki/Arrows_Grand_Prix_International",#FF6600,#FF6600
+22,"benetton","Benetton","Italian","http://en.wikipedia.org/wiki/Benetton_Formula",#008860
+23,"brawn","Brawn","British","http://en.wikipedia.org/wiki/Brawn_GP",#FFFFFF,#D1E200
+24,"stewart","Stewart","British","http://en.wikipedia.org/wiki/Stewart_Grand_Prix",#FFFFFF,#2F4198
 25,"tyrrell","Tyrrell","British","http://en.wikipedia.org/wiki/Tyrrell_Racing"
 26,"lola","Lola","British","http://en.wikipedia.org/wiki/MasterCard_Lola"
 27,"ligier","Ligier","French","http://en.wikipedia.org/wiki/Ligier"
@@ -128,7 +128,7 @@ constructorId,constructorRef,name,nationality,url,colour
 128,"gordini","Gordini","French","http://en.wikipedia.org/wiki/Gordini"
 129,"stevens","Stevens","American","http://en.wikipedia.org/wiki/Stevens_(constructor)"
 130,"bugatti","Bugatti","French","http://en.wikipedia.org/wiki/Bugatti"
-131,"mercedes","Mercedes","German","http://en.wikipedia.org/wiki/Mercedes-Benz_in_Formula_One","#00D7B6"
+131,"mercedes","Mercedes","German","http://en.wikipedia.org/wiki/Mercedes-Benz_in_Formula_One",#00D7B6,#C6C6C6
 132,"lancia","Lancia","Italian","http://en.wikipedia.org/wiki/Lancia_in_Formula_One"
 133,"hwm","HWM","British","http://en.wikipedia.org/wiki/Hersham_and_Walton_Motors"
 134,"schroeder","Schroeder","American","http://en.wikipedia.org/wiki/Schroeder_(constructor)"

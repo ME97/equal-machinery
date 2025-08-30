@@ -1,5 +1,6 @@
 export type YearsByCtor = {
   ctor: string;
+  ctorId: string;
   years: number[]; // sorted array of years driver pair raced together on team [ctor]
 };
 
@@ -13,7 +14,8 @@ export type NodeData = {
     // yearsActive: number[]; // TODO: We waste a lot of space by having this AND yearsByCtor
     yearsByCtor: YearsByCtor[]; // TODO: We hold this info in nodes and edges
     displayCtor?: string; // ctor used for node colouring
-    raceCount?: number // number of races
+    displayCtorId?: string;
+    raceCount?: number; // number of races
     [key: string]: any;
   };
 };
@@ -27,4 +29,10 @@ export type EdgeData = {
     // Also, to check which team to display, just iterate over each and check if years in range
     [key: string]: any;
   };
+};
+
+export type CtorData = {
+    name: string;
+    colorPrimary: string;
+    colorSecondary?: string | null;
 };

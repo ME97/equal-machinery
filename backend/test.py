@@ -131,7 +131,7 @@ def to_cytoscape_data(
     for id in driver_by_id:
         driver: Driver = driver_by_id[id]
         if len(driver.driver_pairs) == 0:
-            continue # do not include drivers with no teammates
+            continue  # do not include drivers with no teammates
         if driver.years_active & year_range:
             nodes.append(
                 {
@@ -146,6 +146,7 @@ def to_cytoscape_data(
                             [
                                 {
                                     "ctor": ctor_by_id[ctor_id].name,
+                                    "ctorId": str(ctor_id),
                                     "years": sorted(years),
                                 }
                                 for ctor_id, years in driver.years_by_ctor.items()
@@ -165,7 +166,11 @@ def to_cytoscape_data(
                 "target": str(driver_pair.driver_id_2),
                 "yearsByCtor": sorted(
                     [
-                        {"ctor": ctor_by_id[ctor_id].name, "years": sorted(years)}
+                        {
+                            "ctor": ctor_by_id[ctor_id].name,
+                            "ctorId": str(ctor_id),
+                            "years": sorted(years),
+                        }
                         for ctor_id, years in driver_pair.years_by_ctor.items()
                     ],
                     key=lambda pair: max(pair["years"]),
@@ -176,6 +181,25 @@ def to_cytoscape_data(
         if driver_pair.driver_id_1 in seen and driver_pair.driver_id_2 in seen
     ]
     return {"nodes": nodes, "edges": edges}
+
+# creates map that frontend will use to style nodes / edges based on ctor
+def create_ctor_map(ctor_by_id: dict[int, Ctor]) -> list[dict[str, str]]:
+    return [
+        {
+            "id": "0",
+            "name": "CTOR_NOT_FOUND",
+            "colorPrimary": "#D4D4D4",
+            "colorSecondary": "#000000",
+        }
+    ] + [
+        {
+            "id": str(ctor.constructor_id),
+            "name": ctor.name,
+            "colorPrimary": ctor.color_primary if ctor.color_primary else "#D4D4D4",
+            "colorSecondary": ctor.color_secondary
+        }
+        for ctor in ctor_by_id.values()
+    ]
 
 
 driver_by_id = load_drivers("data/drivers.csv")
@@ -194,6 +218,9 @@ with open("dump.json", "w") as f:
             to_cytoscape_data(driver_by_id, ctor_by_id, driver_pair_by_id, 0, 2024)
         )
     )
+
+with open("../frontend/src/data/ctorMap.json", "w") as f:
+    f.write(json.dumps(create_ctor_map(ctor_by_id)))
 
 app = FastAPI()
 

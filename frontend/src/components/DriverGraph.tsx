@@ -1,5 +1,6 @@
 // src/components/DriverGraph.tsx
 
+/* IMPORTS */
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import cytoscape, {
   Core,
@@ -9,9 +10,12 @@ import cytoscape, {
 } from 'cytoscape';
 import CytoscapeComponent from 'react-cytoscapejs';
 import coseBilkent from 'cytoscape-cose-bilkent';
-import { NodeData, EdgeData, YearsByCtor } from './types';
-import nodePositions from '../data/nodePositions.json';
+import { NodeData, EdgeData, YearsByCtor, CtorData } from './types';
 import { Range, Direction, getTrackBackground } from 'react-range';
+
+/* STATIC JSON */
+import nodePositionJSON from '../data/nodePositions.json';
+import ctorMapJSON from '../data/ctorMap.json';
 
 cytoscape.use(coseBilkent);
 
@@ -49,6 +53,10 @@ const ctorColorMap: Record<string, string> = {
   Minardi: '#000000',
 };
 
+const ctorMap: Record<string, CtorData> = Object.fromEntries(
+  ctorMapJSON.map(({ id, ...rest }) => [id, rest])
+);
+
 /* HELPER FUNCTIONS */
 // TODO: Consider moving these to another file
 
@@ -81,6 +89,46 @@ function getMostCommonCtor(
   return defaultCtor;
 }
 
+function getMostCommonCtorId(
+  yearsByCtor: YearsByCtor[],
+  yearMin: number = 0,
+  yearMax: number = 9999
+): string {
+  let defaultCtorId: string = '0';
+  if (yearsByCtor.length !== 0) {
+    defaultCtorId = yearsByCtor.at(-1)!.ctorId;
+    let maxCount = yearsByCtor
+      .at(-1)!
+      .years.filter((year) => yearMin <= year && year <= yearMax).length;
+
+    for (let i = yearsByCtor.length - 2; i >= 0; --i) {
+      let count = yearsByCtor[i].years.filter(
+        (year) => yearMin <= year && year <= yearMax
+      ).length;
+      if (count > maxCount) {
+        maxCount = count;
+        defaultCtorId = yearsByCtor[i].ctorId;
+      }
+    }
+  }
+
+  return defaultCtorId;
+}
+
+function getPrimaryColorByCtorId(
+  ctorId: string,
+  defaultColor: string = '#818181'
+): string {
+  return ctorMap[ctorId]?.colorPrimary ?? defaultColor;
+}
+
+function getSecondaryColorByCtorId(
+  ctorId: string,
+  defaultColor: string = '#000000'
+): string {
+  return ctorMap[ctorId]?.colorSecondary ?? getPrimaryColorByCtorId(ctorId);
+}
+
 // updateNodeVisibility(cy, minRaceCount, minYear, maxYear)
 //  Changes node visibility based on parameters
 //    Visible nodes must have at least one active year in [minYear, maxYear],
@@ -93,16 +141,16 @@ function updateNodeVisibility(
   maxYear: number
 ): void {
   cy.nodes().forEach((node: NodeSingular) => {
-    const ctor: string = getMostCommonCtor(
+    const ctorId: string = getMostCommonCtorId(
       node.data('yearsByCtor'),
       minYear,
       maxYear
     );
-    node.data('displayCtor', ctor);
+    node.data('displayCtorId', ctorId);
     node.stop(true);
     node.animate({
       style: {
-        backgroundColor: ctorColorMap[node.data('displayCtor')],
+        backgroundColor: getPrimaryColorByCtorId(node.data('displayCtorId')),
       },
       duration: 150,
     });
@@ -119,6 +167,15 @@ function updateNodeVisibility(
       node.hide();
     }
   });
+  // cy.fit(cy.elements(':visible'), 30); // fit to visible elements
+  // const fitZoom = cy.zoom();
+  // cy.minZoom(fitZoom * 0.85);
+  // cy.maxZoom(fitZoom * 5);
+}
+
+// adjustViewport(cy) fits the frame to the current visible elements, and adjust the zoom accordingly
+function centerViewport(cy: Core | null) {
+  if (!cy) return;
   cy.fit(cy.elements(':visible'), 30); // fit to visible elements
   const fitZoom = cy.zoom();
   cy.minZoom(fitZoom * 0.85);
@@ -193,7 +250,10 @@ export default function DriverGraph() {
   const [minDisplayRaceCount, setMinDisplayRaceCount] = useState(
     DEFAULT_MIN_DISPLAY_RACE_COUNT
   );
-  const [sliderThumbValues, setSliderThumbValues] = useState([2020, 2025]); // initial slider values
+  const [sliderThumbValues, setSliderThumbValues] = useState([
+    DEFAULT_MIN_DISPLAY_YEAR,
+    DEFAULT_MAX_DISPLAY_YEAR,
+  ]); // initial slider values
   const cyRef = useRef<Core | null>(null);
 
   // initial graph fetch
@@ -211,7 +271,7 @@ export default function DriverGraph() {
 
       const layout = cy.layout({
         name: 'preset',
-        positions: nodePositions,
+        positions: nodePositionJSON,
       });
 
       layout.on('layoutstop', () => {
@@ -222,6 +282,7 @@ export default function DriverGraph() {
       });
 
       layout.run();
+      centerViewport(cy);
 
       // cose-bilkent default options
       // const coseBilkentDefaultOptions = {
@@ -311,6 +372,7 @@ export default function DriverGraph() {
   // // update visible nodes on year range change
   useEffect(() => {
     const cy = cyRef.current;
+    console.log('firing');
     if (cy) {
       updateNodeVisibility(
         cy,
@@ -320,13 +382,13 @@ export default function DriverGraph() {
       );
 
       cy.edges().forEach((edge: EdgeSingular) => {
-        const ctor: string = getMostCommonCtor(
+        const ctorId: string = getMostCommonCtorId(
           edge.data('yearsByCtor'),
           minDisplayYear,
           maxDisplayYear
         );
 
-        edge.data('label', ctor);
+        edge.data('displayCtorId', ctorId);
       });
     }
   }, [minDisplayYear, maxDisplayYear, minDisplayRaceCount, elements]);
@@ -393,8 +455,8 @@ export default function DriverGraph() {
       {
         selector: 'node',
         style: {
-          backgroundColor: (ele: NodeSingular) =>
-            ctorColorMap[ele.data('displayCtor')] || '#818181',
+          backgroundColor: (node: NodeSingular) =>
+            getPrimaryColorByCtorId(node.data('displayCtorId')),
           label: 'data(codename)',
           color: 'white',
           'text-outline-color': 'black',
@@ -409,7 +471,15 @@ export default function DriverGraph() {
           'text-max-width': '100px',
           'border-width': 4,
           'border-color': '#000000',
+          // 'border-color': (node: NodeSingular) =>
+          //   getSecondaryColorByCtorId(node.data('displayCtorId')),
           'border-opacity': 1,
+
+          'pie-size': '100%',
+          'pie-hole': '80%',
+          'pie-1-background-color': (node: NodeSingular) =>
+            getSecondaryColorByCtorId(node.data('displayCtorId')),
+          'pie-1-background-size': '100%', // thickness of stripe
         },
       },
       {
@@ -421,7 +491,6 @@ export default function DriverGraph() {
         style: {
           width: 4,
           'line-color': '#aaaaaa',
-          'target-arrow-color': '#aaaaaa',
           'font-size': 12,
           'text-rotation': 'autorotate',
           color: 'white',
@@ -433,12 +502,13 @@ export default function DriverGraph() {
         selector: 'edge.highlighted',
         style: {
           width: 16,
-          label: 'data(label)',
+          label: (edge: EdgeSingular) =>
+            ctorMap[edge.data('displayCtorId')]?.name ?? 'CTOR_NOT_FOUND',
           'transition-property': 'background-color, line-color',
           'transition-duration': '0.3s',
           'z-index': 9999,
-          'line-color': (ele: EdgeSingular) =>
-            ctorColorMap[ele.data('label')] || '#FFFFFF',
+          'line-color': (edge: EdgeSingular) =>
+            getPrimaryColorByCtorId(edge.data('displayCtorId')),
         },
       },
       {
@@ -454,6 +524,8 @@ export default function DriverGraph() {
 
   // style for cytoscape container
   const cyStyle = useMemo(
+    // #f4f4f4 (Original light grey)
+    // #15151e (F1.com background)
     () => ({ width: '100%', height: '100%', backgroundColor: '#f4f4f4' }),
     []
   );
@@ -467,38 +539,39 @@ export default function DriverGraph() {
       (cy as any)._driverGraphEventsBound = true; // guard against binding duplicate listeners
 
       /* EVENT LISTENERS */
-      cy.on('tap', 'edge', (event: EventObject) => {
-        const edge: EdgeSingular = event.target;
-        const source: string = edge.source().data('name') || edge.source().id();
-        const target: string = edge.target().data('name') || edge.target().id();
-        const label = edge
-          .data('yearsByCtor')
-          .map((pair: YearsByCtor) => `${pair.ctor}[${pair.years.join(' ,')}]`)
-          .join(', ');
+      // TODO: Decide what to do on tap / click events
+      // cy.on('tap', 'edge', (event: EventObject) => {
+      //   const edge: EdgeSingular = event.target;
+      //   const source: string = edge.source().data('name') || edge.source().id();
+      //   const target: string = edge.target().data('name') || edge.target().id();
+      //   const label = edge
+      //     .data('yearsByCtor')
+      //     .map((pair: YearsByCtor) => `${pair.ctor}[${pair.years.join(' ,')}]`)
+      //     .join(', ');
 
-        setSelectedInfo(`${source} & ${target} were teammates at ${label}`);
-      });
+      //   setSelectedInfo(`${source} & ${target} were teammates at ${label}`);
+      // });
 
-      cy.on('tap', (event: EventObject) => {
-        if (event.target === cy) {
-          cy.elements().removeClass('faded highlighted');
-          setSelectedInfo(null);
-          setSelectedDrivers([]);
-        }
-      });
+      // cy.on('tap', (event: EventObject) => {
+      //   if (event.target === cy) {
+      //     cy.elements().removeClass('faded highlighted');
+      //     setSelectedInfo(null);
+      //     setSelectedDrivers([]);
+      //   }
+      // });
 
-      cy.on('tap', 'node', (event: EventObject) => {
-        const node = event.target;
-        const driverId = node.id();
+      // cy.on('tap', 'node', (event: EventObject) => {
+      //   const node = event.target;
+      //   const driverId = node.id();
 
-        // toggle driver selection
-        setSelectedDrivers((prev) =>
-          prev.includes(driverId)
-            ? prev.filter((item) => item !== driverId)
-            : [...prev, driverId]
-        );
-        return;
-      });
+      //   // toggle driver selection
+      //   setSelectedDrivers((prev) =>
+      //     prev.includes(driverId)
+      //       ? prev.filter((item) => item !== driverId)
+      //       : [...prev, driverId]
+      //   );
+      //   return;
+      // });
 
       cy.on('mouseover', 'node', (event: EventObject) => {
         const node: NodeSingular = event.target;
@@ -514,7 +587,9 @@ export default function DriverGraph() {
           style: {
             width: DEFAULT_NODE_DIAMETER * NODE_HOVER_SCALE,
             height: DEFAULT_NODE_DIAMETER * NODE_HOVER_SCALE,
-            backgroundColor: ctorColorMap[node.data('displayCtor')],
+            backgroundColor: getPrimaryColorByCtorId(
+              node.data('displayCtorId')
+            ),
           },
           duration: 150,
           easing: 'ease-in-out',
@@ -527,7 +602,9 @@ export default function DriverGraph() {
             style: {
               width: DEFAULT_NODE_DIAMETER * 1.25,
               height: DEFAULT_NODE_DIAMETER * 1.25,
-              backgroundColor: ctorColorMap[edge.data('label')],
+              backgroundColor: getPrimaryColorByCtorId(
+                edge.data('displayCtorId')
+              ),
             },
             duration: 150,
             easing: 'ease-in-out',
@@ -554,6 +631,9 @@ export default function DriverGraph() {
           style: {
             width: DEFAULT_NODE_DIAMETER,
             height: DEFAULT_NODE_DIAMETER,
+            backgroundColor: getPrimaryColorByCtorId(
+              node.data('displayCtorId')
+            ),
           },
           duration: 150,
           easing: 'ease-in-out',
@@ -564,7 +644,9 @@ export default function DriverGraph() {
             style: {
               width: DEFAULT_NODE_DIAMETER,
               height: DEFAULT_NODE_DIAMETER,
-              backgroundColor: ctorColorMap[node.data('displayCtor')],
+              backgroundColor: getPrimaryColorByCtorId(
+                node.data('displayCtorId')
+              ),
             },
             duration: 150,
             easing: 'ease-in-out',
@@ -573,7 +655,9 @@ export default function DriverGraph() {
 
         node.animate({
           style: {
-            backgroundColor: ctorColorMap[node.data('displayCtor')],
+            backgroundColor: getPrimaryColorByCtorId(
+              node.data('displayCtorId')
+            ),
           },
           duration: 150,
         });
@@ -590,7 +674,9 @@ export default function DriverGraph() {
             style: {
               width: DEFAULT_NODE_DIAMETER * 1.25,
               height: DEFAULT_NODE_DIAMETER * 1.25,
-              backgroundColor: ctorColorMap[edge.data('label')],
+              backgroundColor: getPrimaryColorByCtorId(
+                edge.data('displayCtorId')
+              ),
             },
             duration: 150,
             easing: 'ease-in-out',
@@ -610,7 +696,9 @@ export default function DriverGraph() {
             style: {
               width: DEFAULT_NODE_DIAMETER,
               height: DEFAULT_NODE_DIAMETER,
-              backgroundColor: ctorColorMap[node.data('displayCtor')],
+              backgroundColor: getPrimaryColorByCtorId(
+                node.data('displayCtorId')
+              ),
             },
             duration: 150,
             easing: 'ease-in-out',
@@ -752,6 +840,7 @@ export default function DriverGraph() {
                   alignItems: 'center',
                   boxShadow: '0px 2px 6px #AAA',
                   top: index === 0 ? '65%' : '35%',
+                  pointerEvents: 'auto',
                 }}
               >
                 <div
@@ -809,6 +898,13 @@ export default function DriverGraph() {
           }}
         >
           Save Positions
+        </button>
+        <button
+          onClick={() => {
+            centerViewport(cyRef.current);
+          }}
+        >
+          Center Viewport
         </button>
         {/* <div style={{ marginBottom: '1rem' }}>
           <label>Min Value:</label>
