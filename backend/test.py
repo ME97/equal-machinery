@@ -4,6 +4,7 @@ from datetime import date
 from data_types import Driver, Race, Ctor, Result, DriverPair
 from fastapi import FastAPI
 
+## GLOBAL DATA ##
 driver_by_id: dict[int, Driver] = dict()
 race_by_id: dict[int, Race] = dict()
 ctor_by_id: dict[int, Ctor] = dict()
@@ -182,6 +183,12 @@ def to_cytoscape_data(
         for driver_pair in driver_pair_by_id.values()
         if driver_pair.driver_id_1 in seen and driver_pair.driver_id_2 in seen
     ]
+
+    # Order the nodes from newest to oldest
+    #   - This is to fix a label chaching issue, where the last nodes in the list dont get their labels chached
+    #   - This was causing their labels to flicker. For now, put old nodes to end of list
+    #   - TODO: Come up with better solution, so that no labels flicker
+    nodes.sort(key=lambda node:min(node["data"]["yearsByCtor"][0]["years"]),reverse=True)
     return {"nodes": nodes, "edges": edges}
 
 # creates map that frontend will use to style nodes / edges based on ctor

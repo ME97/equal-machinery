@@ -20,7 +20,7 @@ import ctorMapJSON from '../data/ctorMap.json';
 cytoscape.use(coseBilkent);
 
 /* GLOBAL CONSTANTS */
-const DEFAULT_MIN_DISPLAY_YEAR = 2020;
+const DEFAULT_MIN_DISPLAY_YEAR = 2024;
 const DEFAULT_MAX_DISPLAY_YEAR = new Date().getFullYear();
 const DEFAULT_MIN_DISPLAY_RACE_COUNT = 10;
 const NODE_HOVER_SCALE = 1.5;
