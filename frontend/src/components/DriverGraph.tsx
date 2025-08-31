@@ -147,14 +147,14 @@ function updateNodeVisibility(
       maxYear
     );
     node.data('displayCtorId', ctorId);
-    node.stop(true);
-    node.animate({
-      style: {
-        backgroundColor:
-          ctorMap[node.data('displayCtorId')].colorPrimary || '#000000',
-      },
-      duration: 150,
-    });
+    // node.stop(true);
+    // node.animate({
+    //   style: {
+    //     backgroundColor:
+    //       ctorMap[node.data('displayCtorId')].colorPrimary || '#000000',
+    //   },
+    //   duration: 150,
+    // });
 
     const yearsByCtor: YearsByCtor[] = node.data('yearsByCtor');
     if (
@@ -482,11 +482,32 @@ export default function DriverGraph() {
             ctorMap[node.data('displayCtorId')].colorSecondary || '#000000',
 
           'pie-1-background-size': '100%', // thickness of stripe
+
+          'transition-property': 'background-color, width, height',
+          'transition-duration': '150ms',
         },
       },
       {
         selector: 'node.hovered',
-        style: {},
+        style: {
+          width: DEFAULT_NODE_DIAMETER * NODE_HOVER_SCALE,
+          height: DEFAULT_NODE_DIAMETER * NODE_HOVER_SCALE,
+          'transition-property': 'width, height',
+          'transition-duration': '150ms',
+        },
+      },
+      {
+        selector: 'node.neighbor-hovered',
+        style: {
+          width: DEFAULT_NODE_DIAMETER * 1.25,
+          height: DEFAULT_NODE_DIAMETER * 1.25,
+          // Use temporary hoverColor if present, otherwise fall back to displayCtorId
+          backgroundColor: (node: NodeSingular) =>
+            node.data('hoverColor') ??
+            (ctorMap[node.data('displayCtorId')].colorPrimary || '#000000'),
+          'transition-property': 'background-color, width, height',
+          'transition-duration': '150ms',
+        },
       },
       {
         selector: 'edge',
@@ -508,7 +529,7 @@ export default function DriverGraph() {
             ctorMap[edge.data('displayCtorId')].name || '#000000',
 
           'transition-property': 'background-color, line-color',
-          'transition-duration': '0.3s',
+          'transition-duration': '150ms',
           'z-index': 9999,
           'line-color': (edge: EdgeSingular) =>
             ctorMap[edge.data('displayCtorId')].colorPrimary || '#000000',
@@ -585,31 +606,37 @@ export default function DriverGraph() {
           addElementToForeground(edge);
         });
 
-        node.stop(true);
-        node.animate({
-          style: {
-            width: DEFAULT_NODE_DIAMETER * NODE_HOVER_SCALE,
-            height: DEFAULT_NODE_DIAMETER * NODE_HOVER_SCALE,
-            backgroundColor:
-              ctorMap[node.data('displayCtorId')].colorPrimary || '#000000',
-          },
-          duration: 150,
-          easing: 'ease-in-out',
-        });
+        node.addClass('hovered');
+        // node.stop(true);
+        // node.animate({
+        //   style: {
+        //     width: DEFAULT_NODE_DIAMETER * NODE_HOVER_SCALE,
+        //     height: DEFAULT_NODE_DIAMETER * NODE_HOVER_SCALE,
+        //     backgroundColor:
+        //       ctorMap[node.data('displayCtorId')].colorPrimary || '#000000',
+        //   },
+        //   duration: 150,
+        //   easing: 'ease-in-out',
+        // });
 
-        node.neighborhood('node').forEach((neigbor: NodeSingular) => {
-          const edge: EdgeSingular = node.edgesWith(neigbor)[0];
-          neigbor.stop(true);
-          neigbor.animate({
-            style: {
-              width: DEFAULT_NODE_DIAMETER * 1.25,
-              height: DEFAULT_NODE_DIAMETER * 1.25,
-              backgroundColor:
-                ctorMap[edge.data('displayCtorId')].colorPrimary || '#000000',
-            },
-            duration: 150,
-            easing: 'ease-in-out',
-          });
+        node.neighborhood('node').forEach((neighbor: NodeSingular) => {
+          const edge: EdgeSingular = node.edgesWith(neighbor)[0];
+          neighbor.data(
+            'hoverColor',
+            ctorMap[edge.data('displayCtorId')].colorPrimary || '#000000'
+          );
+          neighbor.addClass('neighbor-hovered');
+          // neighbor.stop(true);
+          // neighbor.animate({
+          //   style: {
+          //     width: DEFAULT_NODE_DIAMETER * 1.25,
+          //     height: DEFAULT_NODE_DIAMETER * 1.25,
+          //     backgroundColor:
+          //       ctorMap[edge.data('displayCtorId')].colorPrimary || '#000000',
+          //   },
+          //   duration: 150,
+          //   easing: 'ease-in-out',
+          // });
         });
         cy.elements().not(node.neighborhood().union(node)).addClass('faded');
 
@@ -627,38 +654,40 @@ export default function DriverGraph() {
           removeElementFromForeground(edge);
         });
 
-        node.stop(true);
-        node.animate({
-          style: {
-            width: DEFAULT_NODE_DIAMETER,
-            height: DEFAULT_NODE_DIAMETER,
-            backgroundColor:
-              ctorMap[node.data('displayCtorId')].colorPrimary || '#000000',
-          },
-          duration: 150,
-          easing: 'ease-in-out',
-        });
-        node.neighborhood('node').forEach((node: NodeSingular) => {
-          node.stop(true);
-          node.animate({
-            style: {
-              width: DEFAULT_NODE_DIAMETER,
-              height: DEFAULT_NODE_DIAMETER,
-              backgroundColor:
-                ctorMap[node.data('displayCtorId')].colorPrimary || '#000000',
-            },
-            duration: 150,
-            easing: 'ease-in-out',
-          });
+        node.removeClass('hovered');
+        // node.stop(true);
+        // node.animate({
+        //   style: {
+        //     width: DEFAULT_NODE_DIAMETER,
+        //     height: DEFAULT_NODE_DIAMETER,
+        //     backgroundColor:
+        //       ctorMap[node.data('displayCtorId')].colorPrimary || '#000000',
+        //   },
+        //   duration: 150,
+        //   easing: 'ease-in-out',
+        // });
+        node.neighborhood('node').forEach((neighbor: NodeSingular) => {
+          neighbor.removeData?.('hoverColor');
+          neighbor.removeClass('neighbor-hovered');
+          // node.animate({
+          //   style: {
+          //     width: DEFAULT_NODE_DIAMETER,
+          //     height: DEFAULT_NODE_DIAMETER,
+          //     backgroundColor:
+          //       ctorMap[node.data('displayCtorId')].colorPrimary || '#000000',
+          //   },
+          //   duration: 150,
+          //   easing: 'ease-in-out',
+          // });
         });
 
-        node.animate({
-          style: {
-            backgroundColor:
-              ctorMap[node.data('displayCtorId')].colorPrimary || '#000000',
-          },
-          duration: 150,
-        });
+        // node.animate({
+        //   style: {
+        //     backgroundColor:
+        //       ctorMap[node.data('displayCtorId')].colorPrimary || '#000000',
+        //   },
+        //   duration: 150,
+        // });
         node.connectedEdges().removeClass('highlighted');
       });
 
@@ -666,22 +695,23 @@ export default function DriverGraph() {
         const edge: EdgeSingular = event.target;
         addElementToForeground(edge);
         edge.connectedNodes().forEach((node: NodeSingular) => {
-          console.log('node animating');
           addElementToForeground(node);
-          node.stop(true);
-          node.animate({
-            style: {
-              width: DEFAULT_NODE_DIAMETER * 1.25,
-              height: DEFAULT_NODE_DIAMETER * 1.25,
-              backgroundColor:
-                ctorMap[edge.data('displayCtorId')].colorPrimary || '#000000',
-              // backgroundColor:
-              //   ctorMap[edge.data('displayCtorId')]?.colorPrimary ?? '#000000',
-              // backgroundColor: '#000000',
-            },
-            duration: 150,
-            easing: 'ease-in-out',
-          });
+
+          const edgeColor =
+            ctorMap[edge.data('displayCtorId')]?.colorPrimary || '#000000';
+          node.data('hoverColor', edgeColor);
+          node.addClass('neighbor-hovered');
+          // node.stop(true);
+          // node.animate({
+          //   style: {
+          //     width: DEFAULT_NODE_DIAMETER * 1.25,
+          //     height: DEFAULT_NODE_DIAMETER * 1.25,
+          //     backgroundColor:
+          //       ctorMap[edge.data('displayCtorId')].colorPrimary || '#000000',
+          //   },
+          //   duration: 150,
+          //   easing: 'ease-in-out',
+          // });
         });
         edge.addClass('highlighted');
       });
@@ -692,18 +722,19 @@ export default function DriverGraph() {
 
         edge.connectedNodes().forEach((node: NodeSingular) => {
           removeElementFromForeground(node);
-          node.stop(true);
-          node.animate({
-            style: {
-              width: DEFAULT_NODE_DIAMETER,
-              height: DEFAULT_NODE_DIAMETER,
-              backgroundColor:
-                ctorMap[node.data('displayCtorId')].colorPrimary || '#000000',
-
-            },
-            duration: 150,
-            easing: 'ease-in-out',
-          });
+          node.removeData?.('hoverColor');
+          node.removeClass('neighbor-hovered');
+          // node.stop(true);
+          // node.animate({
+          //   style: {
+          //     width: DEFAULT_NODE_DIAMETER,
+          //     height: DEFAULT_NODE_DIAMETER,
+          //     backgroundColor:
+          //       ctorMap[node.data('displayCtorId')].colorPrimary || '#000000',
+          //   },
+          //   duration: 150,
+          //   easing: 'ease-in-out',
+          // });
         });
         edge.removeClass('highlighted');
       });
@@ -725,6 +756,10 @@ export default function DriverGraph() {
             style={cyStyle}
             stylesheet={cyStylesheet}
             cy={cyBindEventListeners}
+            cytoscapeOptions={{
+              pixelRatio: window.devicePixelRatio || 2,
+              textureOnViewport: true,
+            }}
           />
         </div>
 
