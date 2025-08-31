@@ -150,7 +150,8 @@ function updateNodeVisibility(
     node.stop(true);
     node.animate({
       style: {
-        backgroundColor: getPrimaryColorByCtorId(node.data('displayCtorId')),
+        backgroundColor:
+          ctorMap[node.data('displayCtorId')].colorPrimary || '#000000',
       },
       duration: 150,
     });
@@ -372,7 +373,6 @@ export default function DriverGraph() {
   // // update visible nodes on year range change
   useEffect(() => {
     const cy = cyRef.current;
-    console.log('firing');
     if (cy) {
       updateNodeVisibility(
         cy,
@@ -456,7 +456,8 @@ export default function DriverGraph() {
         selector: 'node',
         style: {
           backgroundColor: (node: NodeSingular) =>
-            getPrimaryColorByCtorId(node.data('displayCtorId')),
+            ctorMap[node.data('displayCtorId')].colorPrimary || '#000000',
+
           label: 'data(codename)',
           color: 'white',
           'text-outline-color': 'black',
@@ -478,7 +479,8 @@ export default function DriverGraph() {
           'pie-size': '100%',
           'pie-hole': '80%',
           'pie-1-background-color': (node: NodeSingular) =>
-            getSecondaryColorByCtorId(node.data('displayCtorId')),
+            ctorMap[node.data('displayCtorId')].colorSecondary || '#000000',
+
           'pie-1-background-size': '100%', // thickness of stripe
         },
       },
@@ -503,12 +505,13 @@ export default function DriverGraph() {
         style: {
           width: 16,
           label: (edge: EdgeSingular) =>
-            ctorMap[edge.data('displayCtorId')]?.name ?? 'CTOR_NOT_FOUND',
+            ctorMap[edge.data('displayCtorId')].name || '#000000',
+
           'transition-property': 'background-color, line-color',
           'transition-duration': '0.3s',
           'z-index': 9999,
           'line-color': (edge: EdgeSingular) =>
-            getPrimaryColorByCtorId(edge.data('displayCtorId')),
+            ctorMap[edge.data('displayCtorId')].colorPrimary || '#000000',
         },
       },
       {
@@ -587,9 +590,8 @@ export default function DriverGraph() {
           style: {
             width: DEFAULT_NODE_DIAMETER * NODE_HOVER_SCALE,
             height: DEFAULT_NODE_DIAMETER * NODE_HOVER_SCALE,
-            backgroundColor: getPrimaryColorByCtorId(
-              node.data('displayCtorId')
-            ),
+            backgroundColor:
+              ctorMap[node.data('displayCtorId')].colorPrimary || '#000000',
           },
           duration: 150,
           easing: 'ease-in-out',
@@ -602,9 +604,8 @@ export default function DriverGraph() {
             style: {
               width: DEFAULT_NODE_DIAMETER * 1.25,
               height: DEFAULT_NODE_DIAMETER * 1.25,
-              backgroundColor: getPrimaryColorByCtorId(
-                edge.data('displayCtorId')
-              ),
+              backgroundColor:
+                ctorMap[edge.data('displayCtorId')].colorPrimary || '#000000',
             },
             duration: 150,
             easing: 'ease-in-out',
@@ -631,9 +632,8 @@ export default function DriverGraph() {
           style: {
             width: DEFAULT_NODE_DIAMETER,
             height: DEFAULT_NODE_DIAMETER,
-            backgroundColor: getPrimaryColorByCtorId(
-              node.data('displayCtorId')
-            ),
+            backgroundColor:
+              ctorMap[node.data('displayCtorId')].colorPrimary || '#000000',
           },
           duration: 150,
           easing: 'ease-in-out',
@@ -644,9 +644,8 @@ export default function DriverGraph() {
             style: {
               width: DEFAULT_NODE_DIAMETER,
               height: DEFAULT_NODE_DIAMETER,
-              backgroundColor: getPrimaryColorByCtorId(
-                node.data('displayCtorId')
-              ),
+              backgroundColor:
+                ctorMap[node.data('displayCtorId')].colorPrimary || '#000000',
             },
             duration: 150,
             easing: 'ease-in-out',
@@ -655,9 +654,8 @@ export default function DriverGraph() {
 
         node.animate({
           style: {
-            backgroundColor: getPrimaryColorByCtorId(
-              node.data('displayCtorId')
-            ),
+            backgroundColor:
+              ctorMap[node.data('displayCtorId')].colorPrimary || '#000000',
           },
           duration: 150,
         });
@@ -668,15 +666,18 @@ export default function DriverGraph() {
         const edge: EdgeSingular = event.target;
         addElementToForeground(edge);
         edge.connectedNodes().forEach((node: NodeSingular) => {
+          console.log('node animating');
           addElementToForeground(node);
           node.stop(true);
           node.animate({
             style: {
               width: DEFAULT_NODE_DIAMETER * 1.25,
               height: DEFAULT_NODE_DIAMETER * 1.25,
-              backgroundColor: getPrimaryColorByCtorId(
-                edge.data('displayCtorId')
-              ),
+              backgroundColor:
+                ctorMap[edge.data('displayCtorId')].colorPrimary || '#000000',
+              // backgroundColor:
+              //   ctorMap[edge.data('displayCtorId')]?.colorPrimary ?? '#000000',
+              // backgroundColor: '#000000',
             },
             duration: 150,
             easing: 'ease-in-out',
@@ -696,9 +697,9 @@ export default function DriverGraph() {
             style: {
               width: DEFAULT_NODE_DIAMETER,
               height: DEFAULT_NODE_DIAMETER,
-              backgroundColor: getPrimaryColorByCtorId(
-                node.data('displayCtorId')
-              ),
+              backgroundColor:
+                ctorMap[node.data('displayCtorId')].colorPrimary || '#000000',
+
             },
             duration: 150,
             easing: 'ease-in-out',

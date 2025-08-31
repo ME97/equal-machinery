@@ -24,6 +24,7 @@ export type EdgeData = {
   data: {
     source: string;
     target: string;
+    displayCtorId?: string;
     yearsByCtor: YearsByCtor[]; // This can be map from ctor to array of years
     // Then, easy to display what years pair was on which team
     // Also, to check which team to display, just iterate over each and check if years in range

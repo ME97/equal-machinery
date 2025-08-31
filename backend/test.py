@@ -137,6 +137,7 @@ def to_cytoscape_data(
                 {
                     "data": {
                         "id": str(id),
+                        "displayCtorId": "0", # default, will get changed
                         "name": str(driver),
                         "codename": driver.codename,
                         "forename": driver.forename,
@@ -164,6 +165,7 @@ def to_cytoscape_data(
             "data": {
                 "source": str(driver_pair.driver_id_1),
                 "target": str(driver_pair.driver_id_2),
+                "displayCtorId": "0", # default, will get changed
                 "yearsByCtor": sorted(
                     [
                         {
