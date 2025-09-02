@@ -5,22 +5,31 @@ from data_types import Driver, Race, Ctor, Result, DriverPair
 from fastapi import FastAPI
 
 ## GLOBAL DATA ##
-driver_by_id: dict[int, Driver] = dict()
+driver_by_id: dict[int, Driver] = (
+    dict()
+)  # indexed by id (e.g 1 -> {Lewis Hamilton Driver Object})
+driver_by_ref: dict[str, Driver] = (
+    dict()
+)  # indexed by driverRef (e.g. "hamilton" -> {Lewis Hamilton Driver Object})
 race_by_id: dict[int, Race] = dict()
 ctor_by_id: dict[int, Ctor] = dict()
+ctor_by_ref: dict[str, Ctor] = dict()
 result_by_id: dict[int, Result] = dict()
 driver_pair_by_id: dict[tuple[int, int], DriverPair] = dict()
 
 
-def load_drivers(file_path: str) -> dict[int, Driver]:
+def load_drivers(file_path: str) -> tuple[dict[int, Driver], dict[str, Driver]]:
+    driver_by_id = {}
+    driver_by_ref = {}
     with open(file_path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
-        map = {}
         for row in reader:
             if row["number"] == r"\N":
                 row["number"] = None
-            map[int(row["driverId"])] = Driver(**row)
-        return map
+            driver = Driver(**row)
+            driver_by_id[int(row["driverId"])] = driver
+            driver_by_ref[row["driverRef"]] = driver
+        return driver_by_id, driver_by_ref
 
 
 def load_results(file_path: str) -> dict[int, Result]:
@@ -41,13 +50,16 @@ def load_races(file_path: str) -> dict[int, Race]:
     return map
 
 
-def load_ctors(file_path: str) -> dict[int, Ctor]:
-    map = {}
+def load_ctors(file_path: str) -> tuple[dict[int, Ctor], dict[str, Ctor]]:
+    ctor_by_id: dict[int, Ctor] = {}
+    ctor_by_ref: dict[str, Ctor] = {}
     with open(file_path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            map[int(row["constructorId"])] = Ctor(**row)
-    return map
+            ctor = Ctor(**row)
+            ctor_by_id[int(ctor.constructor_id)] = ctor
+            ctor_by_ref[ctor.constructor_ref] = ctor
+    return ctor_by_id, ctor_by_ref
 
 
 def process_results(
@@ -138,7 +150,7 @@ def to_cytoscape_data(
                 {
                     "data": {
                         "id": str(id),
-                        "displayCtorId": "0", # default, will get changed
+                        "displayCtorId": "0",  # default, will get changed
                         "name": str(driver),
                         "codename": driver.codename,
                         "forename": driver.forename,
@@ -166,7 +178,7 @@ def to_cytoscape_data(
             "data": {
                 "source": str(driver_pair.driver_id_1),
                 "target": str(driver_pair.driver_id_2),
-                "displayCtorId": "0", # default, will get changed
+                "displayCtorId": "0",  # default, will get changed
                 "yearsByCtor": sorted(
                     [
                         {
@@ -188,11 +200,15 @@ def to_cytoscape_data(
     #   - This is to fix a label chaching issue, where the last nodes in the list dont get their labels chached
     #   - This was causing their labels to flicker. For now, put old nodes to end of list
     #   - TODO: Come up with better solution, so that no labels flicker
-    nodes.sort(key=lambda node:min(node["data"]["yearsByCtor"][0]["years"]),reverse=True)
+    nodes.sort(
+        key=lambda node: min(node["data"]["yearsByCtor"][0]["years"]), reverse=True
+    )
     return {"nodes": nodes, "edges": edges}
+
 
 # creates map that frontend will use to style nodes / edges based on ctor
 def create_ctor_map(ctor_by_id: dict[int, Ctor]) -> list[dict[str, str]]:
+
     return [
         {
             "id": "0",
@@ -205,16 +221,137 @@ def create_ctor_map(ctor_by_id: dict[int, Ctor]) -> list[dict[str, str]]:
             "id": str(ctor.constructor_id),
             "name": ctor.name,
             "colorPrimary": ctor.color_primary if ctor.color_primary else "#D4D4D4",
-            "colorSecondary": ctor.color_secondary
+            "colorSecondary": ctor.color_secondary,
         }
         for ctor in ctor_by_id.values()
     ]
 
 
-driver_by_id = load_drivers("data/drivers.csv")
-ctor_by_id = load_ctors("data/constructors.csv")
-result_by_id = load_results("data/results.csv")
-race_by_id = load_races("data/races.csv")
+# Takes result JSON and populates race/result CSVs
+def process_new_json(
+    json_path: str,
+    race_csv_path: str,
+    result_csv_path: str,
+    driver_by_ref: dict[str, Driver],
+    ctor_by_ref: dict[str, Ctor],
+) -> None:
+
+    # Load existing CSV to find max raceId
+    with open(race_csv_path, newline="", encoding="utf-8") as f:
+        reader = csv.reader(f)
+        race_rows = list(reader)
+
+    race_header = race_rows[0]
+    race_data = race_rows[1:]
+    max_race_id = max(int(race[0]) for race in race_data if race[0].isdigit())
+
+    with open(result_csv_path, newline="", encoding="utf-8") as f:
+        reader = csv.reader(f)
+        result_rows = list(reader)
+
+    result_header = result_rows[0]
+    result_data = result_rows[1:]
+    max_result_id = max(int(result[0]) for result in result_data if result[0].isdigit())
+
+    # Load JSON races
+    with open(json_path, encoding="utf-8") as f:
+        races_json = json.load(f)
+
+    new_race_rows = []
+    new_result_rows = []
+    race_id = max_race_id
+    result_id = max_result_id
+
+    for race in races_json["MRData"]["RaceTable"]["Races"]:
+        race_id += 1
+        season = race.get("season")
+        round = race.get("round")
+        race_name = race.get("raceName")
+        url = race.get("url")
+        date = race.get("date")
+        time = race.get("time", None)  # Some JSONs include "time"
+
+        # For consistency with your example CSV structure
+        # Adjust indexes if your CSV has more columns
+        row = [
+            race_id,  # raceId
+            season,  # season (year)
+            round,  # round
+            "\\N",  # circuit ID
+            race_name,  # raceName
+            date,  # race date
+            time or "\\N",  # race time
+            url,  # wikipedia URL
+            "\\N",
+            "\\N",  # FP1 date/time
+            "\\N",
+            "\\N",  # FP2 date/time
+            "\\N",
+            "\\N",  # FP3 date/time
+            "\\N",
+            "\\N",  # Quali date/time
+            "\\N",
+            "\\N",  # Sprint date/time
+        ]
+        new_race_rows.append(row)
+
+        for result in race.get("Results"):
+            result_id += 1
+            driver_id = driver_by_ref[result.get("Driver").get("driverId")].driver_id
+            ctor_id = ctor_by_ref[
+                result.get("Constructor").get("constructorId")
+            ].constructor_id
+            number = int(result.get("Driver").get("permanentNumber"))
+            grid = int(result.get("grid"))
+            position = int(result.get("position"))
+            position_text = result.get("positionText")
+            points = int(result.get("points"))
+            position_order = laps = time = milliseconds = fastestLap = rank = (
+                fastestLapTime
+            ) = fastestLapSpeed = statusId = "\\N"
+            row = [
+                result_id,
+                race_id,
+                driver_id,
+                ctor_id,
+                number,
+                grid,
+                position,
+                position_text,
+                position_order,
+                points,
+                laps,
+                time,
+                milliseconds,
+                fastestLap,
+                rank,
+                fastestLapTime,
+                fastestLapSpeed,
+                statusId,
+            ]
+
+            new_result_rows.append(row)
+
+    # Write back out with new races appended
+    with open("data/new_races.csv", "w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(race_header)
+        writer.writerows(race_data + new_race_rows)
+
+    with open("data/new_results.csv", "w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(result_header)
+        writer.writerows(result_data + new_result_rows)
+
+    pass
+
+
+# # MAIN LOADER CODE
+
+driver_by_id, driver_by_ref = load_drivers("data/drivers.csv")
+ctor_by_id, ctor_by_ref = load_ctors("data/constructors.csv")
+result_by_id = load_results("data/new_results.csv")
+race_by_id = load_races("data/new_races.csv")
 process_results(race_by_id, result_by_id, driver_by_id)
 
 driver_pair_by_id = populate_driver_pairings(
@@ -224,7 +361,7 @@ driver_pair_by_id = populate_driver_pairings(
 with open("dump.json", "w") as f:
     f.write(
         json.dumps(
-            to_cytoscape_data(driver_by_id, ctor_by_id, driver_pair_by_id, 0, 2024)
+            to_cytoscape_data(driver_by_id, ctor_by_id, driver_pair_by_id, 0, 2025)
         )
     )
 
@@ -236,4 +373,10 @@ app = FastAPI()
 
 @app.get("/graph")
 def get_graph():
-    return to_cytoscape_data(driver_by_id, ctor_by_id, driver_pair_by_id, 0, 2024)
+    return to_cytoscape_data(driver_by_id, ctor_by_id, driver_pair_by_id, 0, 2025)
+
+
+# process_new_json(
+#     "data/2025/f1_2025_results_pt1.json", "data/races.csv", "data/results.csv",
+#     driver_by_ref, ctor_by_ref
+# )

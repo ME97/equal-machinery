@@ -13,6 +13,8 @@ import coseBilkent from 'cytoscape-cose-bilkent';
 import { NodeData, EdgeData, YearsByCtor, CtorData } from './types';
 import { Range, Direction, getTrackBackground } from 'react-range';
 
+import '../style/style.css';
+
 /* STATIC JSON */
 import nodePositionJSON from '../data/nodePositions.json';
 import ctorMapJSON from '../data/ctorMap.json';
@@ -22,72 +24,17 @@ cytoscape.use(coseBilkent);
 /* GLOBAL CONSTANTS */
 const DEFAULT_MIN_DISPLAY_YEAR = 2024;
 const DEFAULT_MAX_DISPLAY_YEAR = new Date().getFullYear();
-const DEFAULT_MIN_DISPLAY_RACE_COUNT = 10;
+const DEFAULT_MIN_DISPLAY_RACE_COUNT = 5;
 const NODE_HOVER_SCALE = 1.5;
 const DEFAULT_NODE_DIAMETER = computeNodeDiameter();
 const TIMELINE_MIN_YEAR = 1970;
 const TIMELINE_MAX_YEAR = new Date().getFullYear();
-const ctorColorMap: Record<string, string> = {
-  Ferrari: '#ff2800',
-  Mercedes: '#00D7B6',
-  'Red Bull': '#0600ef',
-  'Haas F1 Team': '#9C9FA2',
-  'RB F1 Team': '#6C98FF',
-  'Alpine F1 Team': '#00A1E8',
-  'Aston Martin': '#229971',
-  Sauber: '#01C00E',
-  Williams: '#1868DB',
-  McLaren: '#F47600',
-  Renault: '#FFF500',
-  'Force India': '#F596C8',
-  'Alfa Romeo': '#981E32',
-  'Racing Point': '#F596C8',
-  'Toro Rosso': '#469BFF',
-  AlphaTauri: '#00293F',
-  Jordan: '#ffff00',
-  'Manor Marussia': '#db1922',
-  Marussia: '#db1922',
-  'Lotus F1': '#b39759',
-  Toyota: '#db3d4b',
-  Ligier: '#0056ba',
-  Minardi: '#000000',
-};
 
 const ctorMap: Record<string, CtorData> = Object.fromEntries(
   ctorMapJSON.map(({ id, ...rest }) => [id, rest])
 );
 
 /* HELPER FUNCTIONS */
-// TODO: Consider moving these to another file
-
-// getMostCommonCtor(yearsByCtor, yearMin, yearMax)
-//    returns the ctor with the most years in [yearMin, yearMax]
-//    picks the most recent ctor in the case of a tie
-function getMostCommonCtor(
-  yearsByCtor: YearsByCtor[],
-  yearMin: number = 0,
-  yearMax: number = 9999
-): string {
-  let defaultCtor: string = 'DEFAULT_CTOR';
-  if (yearsByCtor.length !== 0) {
-    defaultCtor = yearsByCtor.at(-1)!.ctor;
-    let maxCount = yearsByCtor
-      .at(-1)!
-      .years.filter((year) => yearMin <= year && year <= yearMax).length;
-
-    for (let i = yearsByCtor.length - 2; i >= 0; --i) {
-      let count = yearsByCtor[i].years.filter(
-        (year) => yearMin <= year && year <= yearMax
-      ).length;
-      if (count > maxCount) {
-        maxCount = count;
-        defaultCtor = yearsByCtor[i].ctor;
-      }
-    }
-  }
-
-  return defaultCtor;
-}
 
 function getMostCommonCtorId(
   yearsByCtor: YearsByCtor[],
@@ -113,20 +60,6 @@ function getMostCommonCtorId(
   }
 
   return defaultCtorId;
-}
-
-function getPrimaryColorByCtorId(
-  ctorId: string,
-  defaultColor: string = '#818181'
-): string {
-  return ctorMap[ctorId]?.colorPrimary ?? defaultColor;
-}
-
-function getSecondaryColorByCtorId(
-  ctorId: string,
-  defaultColor: string = '#000000'
-): string {
-  return ctorMap[ctorId]?.colorSecondary ?? getPrimaryColorByCtorId(ctorId);
 }
 
 // updateNodeVisibility(cy, minRaceCount, minYear, maxYear)
@@ -284,6 +217,7 @@ export default function DriverGraph() {
 
       layout.run();
       centerViewport(cy);
+      cy.autolock(true);
 
       // cose-bilkent default options
       // const coseBilkentDefaultOptions = {
@@ -455,9 +389,6 @@ export default function DriverGraph() {
       {
         selector: 'node',
         style: {
-          backgroundColor: (node: NodeSingular) =>
-            ctorMap[node.data('displayCtorId')].colorPrimary || '#000000',
-
           label: 'data(codename)',
           color: 'white',
           'text-outline-color': 'black',
@@ -470,21 +401,23 @@ export default function DriverGraph() {
           'font-size': '14px',
           'text-margin-y': '5px',
           'text-max-width': '100px',
-          'border-width': 4,
+          'border-width': 6,
           'border-color': '#000000',
-          // 'border-color': (node: NodeSingular) =>
-          //   getSecondaryColorByCtorId(node.data('displayCtorId')),
           'border-opacity': 1,
 
+          backgroundColor: (node: NodeSingular) =>
+            ctorMap[node.data('displayCtorId')].colorPrimary || '#000000',
+          // Use pie to create inner ring for secondary color
           'pie-size': '100%',
-          'pie-hole': '80%',
+          'pie-hole': '85%',
           'pie-1-background-color': (node: NodeSingular) =>
-            ctorMap[node.data('displayCtorId')].colorSecondary || '#000000',
-
-          'pie-1-background-size': '100%', // thickness of stripe
+            ctorMap[node.data('displayCtorId')].colorSecondary ||
+            ctorMap[node.data('displayCtorId')].colorPrimary ||
+            '#000000',
+          'pie-1-background-size': '100%',
 
           'transition-property': 'background-color, width, height',
-          'transition-duration': '150ms',
+          'transition-duration': '100ms',
         },
       },
       {
@@ -493,7 +426,7 @@ export default function DriverGraph() {
           width: DEFAULT_NODE_DIAMETER * NODE_HOVER_SCALE,
           height: DEFAULT_NODE_DIAMETER * NODE_HOVER_SCALE,
           'transition-property': 'width, height',
-          'transition-duration': '150ms',
+          'transition-duration': '100ms',
         },
       },
       {
@@ -505,8 +438,13 @@ export default function DriverGraph() {
           backgroundColor: (node: NodeSingular) =>
             node.data('hoverColor') ??
             (ctorMap[node.data('displayCtorId')].colorPrimary || '#000000'),
+          'pie-1-background-color': (node: NodeSingular) =>
+            node.data('hoverColorSecondary') ??
+            (ctorMap[node.data('displayCtorId')].colorSecondary ||
+              ctorMap[node.data('displayCtorId')].colorPrimary ||
+              '#000000'),
           'transition-property': 'background-color, width, height',
-          'transition-duration': '150ms',
+          'transition-duration': '100ms',
         },
       },
       {
@@ -529,7 +467,7 @@ export default function DriverGraph() {
             ctorMap[edge.data('displayCtorId')].name || '#000000',
 
           'transition-property': 'background-color, line-color',
-          'transition-duration': '150ms',
+          'transition-duration': '100ms',
           'z-index': 9999,
           'line-color': (edge: EdgeSingular) =>
             ctorMap[edge.data('displayCtorId')].colorPrimary || '#000000',
@@ -550,7 +488,7 @@ export default function DriverGraph() {
   const cyStyle = useMemo(
     // #f4f4f4 (Original light grey)
     // #15151e (F1.com background)
-    () => ({ width: '100%', height: '100%', backgroundColor: '#f4f4f4' }),
+    () => ({ width: '100%', height: '100%', backgroundColor: '#c4c4c4ff' }),
     []
   );
 
@@ -584,18 +522,23 @@ export default function DriverGraph() {
       //   }
       // });
 
-      // cy.on('tap', 'node', (event: EventObject) => {
-      //   const node = event.target;
-      //   const driverId = node.id();
+      cy.on('tap', 'node', (event: EventObject) => {
+        const node = event.target;
+        addElementToForeground(node);
+        node.neighborhood().forEach((edge: EdgeSingular) => {
+          addElementToForeground(edge);
+        });
 
-      //   // toggle driver selection
-      //   setSelectedDrivers((prev) =>
-      //     prev.includes(driverId)
-      //       ? prev.filter((item) => item !== driverId)
-      //       : [...prev, driverId]
-      //   );
-      //   return;
-      // });
+        // const driverId = node.id();
+
+        // // toggle driver selection
+        // setSelectedDrivers((prev) =>
+        //   prev.includes(driverId)
+        //     ? prev.filter((item) => item !== driverId)
+        //     : [...prev, driverId]
+        // );
+        // return;
+      });
 
       cy.on('mouseover', 'node', (event: EventObject) => {
         const node: NodeSingular = event.target;
@@ -621,10 +564,14 @@ export default function DriverGraph() {
 
         node.neighborhood('node').forEach((neighbor: NodeSingular) => {
           const edge: EdgeSingular = node.edgesWith(neighbor)[0];
-          neighbor.data(
-            'hoverColor',
-            ctorMap[edge.data('displayCtorId')].colorPrimary || '#000000'
-          );
+          const edgeColor =
+            ctorMap[edge.data('displayCtorId')]?.colorPrimary || '#000000';
+          const edgeColorSecondary =
+            ctorMap[edge.data('displayCtorId')]?.colorSecondary ||
+            edgeColor ||
+            '#000000';
+          neighbor.data('hoverColor', edgeColor);
+          neighbor.data('hoverColorSecondary', edgeColorSecondary);
           neighbor.addClass('neighbor-hovered');
           // neighbor.stop(true);
           // neighbor.animate({
@@ -699,7 +646,12 @@ export default function DriverGraph() {
 
           const edgeColor =
             ctorMap[edge.data('displayCtorId')]?.colorPrimary || '#000000';
+          const edgeColorSecondary =
+            ctorMap[edge.data('displayCtorId')]?.colorSecondary ||
+            edgeColor ||
+            '#000000';
           node.data('hoverColor', edgeColor);
+          node.data('hoverColorSecondary', edgeColorSecondary);
           node.addClass('neighbor-hovered');
           // node.stop(true);
           // node.animate({
@@ -722,7 +674,7 @@ export default function DriverGraph() {
 
         edge.connectedNodes().forEach((node: NodeSingular) => {
           removeElementFromForeground(node);
-          node.removeData?.('hoverColor');
+          // node.removeData?.('hoverColor');
           node.removeClass('neighbor-hovered');
           // node.stop(true);
           // node.animate({
@@ -748,7 +700,11 @@ export default function DriverGraph() {
         height: '100vh', // full screen height
       }}
     >
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      {/* Graph and Timeline Container*/}
+      <div
+        id='cy'
+        style={{ flex: 1, display: 'flex', flexDirection: 'column' }}
+      >
         {/* Graph */}
         <div style={{ flex: 1 }}>
           <CytoscapeComponent
@@ -756,25 +712,11 @@ export default function DriverGraph() {
             style={cyStyle}
             stylesheet={cyStylesheet}
             cy={cyBindEventListeners}
-            cytoscapeOptions={{
-              pixelRatio: window.devicePixelRatio || 2,
-              textureOnViewport: true,
-            }}
+            pixelRatio={window.devicePixelRatio || 2}
+            // autoungrabify={true}
+            // autounselectify={true}
           />
         </div>
-
-        {/* Styling to prevent timeline thumbs from highlighting */}
-        <style>
-          {`
-        .react-range__thumb {
-          outline: none;
-        }
-
-        .react-range__thumb:focus-visible {
-          outline: auto;
-        }
-      `}
-        </style>
 
         {/* Timeline Slider */}
         <div

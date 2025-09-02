@@ -83,7 +83,7 @@ class Result(MyBaseModel):
 class Race(MyBaseModel):
     race_id: int
     year: int
-    circuit_id: int
+    # circuit_id: int
     name: str
     date: date
     drivers: set[int] = Field(
