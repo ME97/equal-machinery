@@ -78,14 +78,6 @@ function updateNodeVisibility(
       maxYear
     );
     node.data('displayCtorId', ctorId);
-    // node.stop(true);
-    // node.animate({
-    //   style: {
-    //     backgroundColor:
-    //       ctorMap[node.data('displayCtorId')].colorPrimary || '#000000',
-    //   },
-    //   duration: 150,
-    // });
 
     const yearsByCtor: YearsByCtor[] = node.data('yearsByCtor');
     if (
@@ -99,13 +91,9 @@ function updateNodeVisibility(
       node.hide();
     }
   });
-  // cy.fit(cy.elements(':visible'), 30); // fit to visible elements
-  // const fitZoom = cy.zoom();
-  // cy.minZoom(fitZoom * 0.85);
-  // cy.maxZoom(fitZoom * 5);
 }
 
-// adjustViewport(cy) fits the frame to the current visible elements, and adjust the zoom accordingly
+// centerViewport(cy) fits the frame to the current visible elements, and adjust the zoom accordingly
 function centerViewport(cy: Core | null) {
   if (!cy) return;
   cy.fit(cy.elements(':visible'), 30); // fit to visible elements
@@ -135,10 +123,7 @@ function savePositions(cy: Core | null) {
     return acc;
   }, {} as Record<string, { x: number; y: number }>);
 
-  // Print to console so you can copy/paste into a JSON file
-  // console.log(JSON.stringify(positions, null, 2));
 
-  // Download as JSON file directly
   const blob = new Blob([JSON.stringify(positions, null, 2)], {
     type: 'application/json',
   });
@@ -168,7 +153,6 @@ function removeElementFromForeground(element: any): void {
   }
 }
 
-// The main function to export the component
 export default function DriverGraph() {
   const [elements, setElements] = useState<(NodeData | EdgeData)[]>([]);
   const [selectedInfo, setSelectedInfo] = useState<string | null>(null);
@@ -527,15 +511,6 @@ export default function DriverGraph() {
           addElementToForeground(edge);
         });
 
-        // const driverId = node.id();
-
-        // // toggle driver selection
-        // setSelectedDrivers((prev) =>
-        //   prev.includes(driverId)
-        //     ? prev.filter((item) => item !== driverId)
-        //     : [...prev, driverId]
-        // );
-        // return;
       });
 
       cy.on('mouseover', 'node', (event: EventObject) => {
@@ -548,17 +523,6 @@ export default function DriverGraph() {
         });
 
         node.addClass('hovered');
-        // node.stop(true);
-        // node.animate({
-        //   style: {
-        //     width: DEFAULT_NODE_DIAMETER * NODE_HOVER_SCALE,
-        //     height: DEFAULT_NODE_DIAMETER * NODE_HOVER_SCALE,
-        //     backgroundColor:
-        //       ctorMap[node.data('displayCtorId')].colorPrimary || '#000000',
-        //   },
-        //   duration: 150,
-        //   easing: 'ease-in-out',
-        // });
 
         node.neighborhood('node').forEach((neighbor: NodeSingular) => {
           const edge: EdgeSingular = node.edgesWith(neighbor)[0];
@@ -571,17 +535,6 @@ export default function DriverGraph() {
           neighbor.data('hoverColor', edgeColor);
           neighbor.data('hoverColorSecondary', edgeColorSecondary);
           neighbor.addClass('neighbor-hovered');
-          // neighbor.stop(true);
-          // neighbor.animate({
-          //   style: {
-          //     width: DEFAULT_NODE_DIAMETER * 1.25,
-          //     height: DEFAULT_NODE_DIAMETER * 1.25,
-          //     backgroundColor:
-          //       ctorMap[edge.data('displayCtorId')].colorPrimary || '#000000',
-          //   },
-          //   duration: 150,
-          //   easing: 'ease-in-out',
-          // });
         });
         cy.elements().not(node.neighborhood().union(node)).addClass('faded');
 
@@ -600,39 +553,11 @@ export default function DriverGraph() {
         });
 
         node.removeClass('hovered');
-        // node.stop(true);
-        // node.animate({
-        //   style: {
-        //     width: DEFAULT_NODE_DIAMETER,
-        //     height: DEFAULT_NODE_DIAMETER,
-        //     backgroundColor:
-        //       ctorMap[node.data('displayCtorId')].colorPrimary || '#000000',
-        //   },
-        //   duration: 150,
-        //   easing: 'ease-in-out',
-        // });
         node.neighborhood('node').forEach((neighbor: NodeSingular) => {
           neighbor.removeData?.('hoverColor');
           neighbor.removeClass('neighbor-hovered');
-          // node.animate({
-          //   style: {
-          //     width: DEFAULT_NODE_DIAMETER,
-          //     height: DEFAULT_NODE_DIAMETER,
-          //     backgroundColor:
-          //       ctorMap[node.data('displayCtorId')].colorPrimary || '#000000',
-          //   },
-          //   duration: 150,
-          //   easing: 'ease-in-out',
-          // });
         });
 
-        // node.animate({
-        //   style: {
-        //     backgroundColor:
-        //       ctorMap[node.data('displayCtorId')].colorPrimary || '#000000',
-        //   },
-        //   duration: 150,
-        // });
         node.connectedEdges().removeClass('highlighted');
       });
 
@@ -651,17 +576,6 @@ export default function DriverGraph() {
           node.data('hoverColor', edgeColor);
           node.data('hoverColorSecondary', edgeColorSecondary);
           node.addClass('neighbor-hovered');
-          // node.stop(true);
-          // node.animate({
-          //   style: {
-          //     width: DEFAULT_NODE_DIAMETER * 1.25,
-          //     height: DEFAULT_NODE_DIAMETER * 1.25,
-          //     backgroundColor:
-          //       ctorMap[edge.data('displayCtorId')].colorPrimary || '#000000',
-          //   },
-          //   duration: 150,
-          //   easing: 'ease-in-out',
-          // });
         });
         edge.addClass('highlighted');
       });
@@ -672,19 +586,8 @@ export default function DriverGraph() {
 
         edge.connectedNodes().forEach((node: NodeSingular) => {
           removeElementFromForeground(node);
-          // node.removeData?.('hoverColor');
+          node.removeData?.('hoverColor');
           node.removeClass('neighbor-hovered');
-          // node.stop(true);
-          // node.animate({
-          //   style: {
-          //     width: DEFAULT_NODE_DIAMETER,
-          //     height: DEFAULT_NODE_DIAMETER,
-          //     backgroundColor:
-          //       ctorMap[node.data('displayCtorId')].colorPrimary || '#000000',
-          //   },
-          //   duration: 150,
-          //   easing: 'ease-in-out',
-          // });
         });
         edge.removeClass('highlighted');
       });
@@ -711,8 +614,6 @@ export default function DriverGraph() {
             stylesheet={cyStylesheet}
             cy={cyBindEventListeners}
             pixelRatio={window.devicePixelRatio || 2}
-            // autoungrabify={true}
-            // autounselectify={true}
           />
         </div>
 
@@ -725,7 +626,7 @@ export default function DriverGraph() {
             flexWrap: 'wrap',
             alignItems: 'center',
             height: '15%',
-            width: '80%',
+            width: '100%',
 
             // settings to allow timeline to float over graph
             background: 'transparent',
@@ -834,13 +735,6 @@ export default function DriverGraph() {
                 >
                   {sliderThumbValues[index]}
                 </div>
-                {/* <div
-                  style={{
-                    width: '16px',
-                    height: '5px',
-                    backgroundColor: isDragged ? '#548BF4' : '#CCC',
-                  }}
-                /> */}
               </div>
             )}
           />
@@ -848,7 +742,7 @@ export default function DriverGraph() {
       </div>
 
       {/* Display Panel*/}
-      <div
+      {/* <div
         style={{
           width: '15%', // quarter width
           backgroundColor: '#fafafa',
@@ -882,36 +776,7 @@ export default function DriverGraph() {
         >
           Center Viewport
         </button>
-        {/* <div style={{ marginBottom: '1rem' }}>
-          <label>Min Value:</label>
-          <input
-            type="number"
-            value={minDisplayYear}
-            onChange={(e) => {
-              const newMin = Number(e.target.value);
-              setMinDisplayYear(() => {
-                return newMin <= maxDisplayYear ? newMin : minDisplayYear;
-              });
-            }}
-            style={{ width: '25%', padding: '0.5rem', marginTop: '0.25rem' }}
-          />
-        </div>
-
-        <div>
-          <label>Max Value:</label>
-          <input
-            type="number"
-            value={maxDisplayYear}
-            onChange={(e) => {
-              const newMax = Number(e.target.value);
-              setMaxDisplayYear(() => {
-                return newMax >= minDisplayYear ? newMax : minDisplayYear;
-              });
-            }}
-            style={{ width: '25%', padding: '0.5rem', marginTop: '0.25rem' }}
-          />
-        </div> */}
-      </div>
+      </div> */}
     </div>
   );
 }
