@@ -488,7 +488,7 @@ export default function DriverGraph() {
   const cyStyle = useMemo(
     // #f4f4f4 (Original light grey)
     // #15151e (F1.com background)
-    () => ({ width: '100%', height: '100%', backgroundColor: '#c4c4c4ff' }),
+    () => ({ width: '100%', height: '100%', backgroundColor: '#272822' }),
     []
   );
 

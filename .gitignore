@@ -137,3 +137,20 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Ignore Python virtual environments
+venv/
+*/venv/
+
+# Ignore Python cache
+/backend/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore common environment/IDE stuff
+.env
+.DS_Store
+*.swp
+
+dist/
