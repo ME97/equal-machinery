@@ -1,5 +1,5 @@
-import './App.css';
-import DriverGraph from './components/DriverGraph';
+import './styles/App.css';
+import DriverGraph from './components/DriverGraph/DriverGraph';
 
 function App() {
   return (

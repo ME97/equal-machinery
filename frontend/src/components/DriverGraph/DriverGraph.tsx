@@ -10,14 +10,12 @@ import cytoscape, {
 } from 'cytoscape';
 import CytoscapeComponent from 'react-cytoscapejs';
 import coseBilkent from 'cytoscape-cose-bilkent';
-import { NodeData, EdgeData, YearsByCtor, CtorData } from './types';
+import { NodeData, EdgeData, YearsByCtor, CtorData } from './DriverGraph.types';
 import { Range, Direction, getTrackBackground } from 'react-range';
 
-import '../style/style.css';
-
 /* STATIC JSON */
-import nodePositionJSON from '../data/nodePositions.json';
-import ctorMapJSON from '../data/ctorMap.json';
+import nodePositionJSON from '../../data/nodePositions.json';
+import ctorMapJSON from '../../data/ctorMap.json';
 
 cytoscape.use(coseBilkent);
 
