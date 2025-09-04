@@ -1,176 +1,382 @@
-from networkx.algorithms.shortest_paths.generic import shortest_path_length
 import csv
-import networkx as nx
+import json
 from datetime import date
+from data_types import Driver, Race, Ctor, Result, DriverPair
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
-from data_types import Driver, Race, Teammates
 
-# GLOBAL DATA
-drivers = {}
-races = {}
-results = {}
+## GLOBAL DATA ##
+driver_by_id: dict[int, Driver] = (
+    dict()
+)  # indexed by id (e.g 1 -> {Lewis Hamilton Driver Object})
+driver_by_ref: dict[str, Driver] = (
+    dict()
+)  # indexed by driverRef (e.g. "hamilton" -> {Lewis Hamilton Driver Object})
+race_by_id: dict[int, Race] = dict()
+ctor_by_id: dict[int, Ctor] = dict()
+ctor_by_ref: dict[str, Ctor] = dict()
+result_by_id: dict[int, Result] = dict()
+driver_pair_by_id: dict[tuple[int, int], DriverPair] = dict()
+
+
+def load_drivers(file_path: str) -> tuple[dict[int, Driver], dict[str, Driver]]:
+    driver_by_id = {}
+    driver_by_ref = {}
+    with open(file_path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            if row["number"] == r"\N":
+                row["number"] = None
+            driver = Driver(**row)
+            driver_by_id[int(row["driverId"])] = driver
+            driver_by_ref[row["driverRef"]] = driver
+        return driver_by_id, driver_by_ref
+
+
+def load_results(file_path: str) -> dict[int, Result]:
+    map = {}
+    with open(file_path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            map[int(row["resultId"])] = Result(**row)
+    return map
+
 
 def load_races(file_path: str) -> dict[int, Race]:
     map = {}
-    with open(file_path, newline='', encoding='utf-8') as f:
+    with open(file_path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            map[row['raceId']] = Race(**row)
+            map[int(row["raceId"])] = Race(**row)
     return map
-            
-def load_drivers(file_path: str) -> dict[int, Driver]:
-    with open(file_path, newline='', encoding='utf-8') as f:
+
+
+def load_ctors(file_path: str) -> tuple[dict[int, Ctor], dict[str, Ctor]]:
+    ctor_by_id: dict[int, Ctor] = {}
+    ctor_by_ref: dict[str, Ctor] = {}
+    with open(file_path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
-        drivers = {}
         for row in reader:
-            y = date.fromisoformat(row['dob']).year
-            if y < 1970:
+            ctor = Ctor(**row)
+            ctor_by_id[int(ctor.constructor_id)] = ctor
+            ctor_by_ref[ctor.constructor_ref] = ctor
+    return ctor_by_id, ctor_by_ref
+
+
+def process_results(
+    race_by_id: dict[int, Race],
+    result_by_id: dict[int, Result],
+    driver_by_id: dict[int, Driver],
+):
+    for result in result_by_id.values():
+        race: Race = race_by_id[result.race_id]
+        race.results.add(result.result_id)
+        race.drivers.add(result.driver_id)
+        race.ctors.add(result.constructor_id)
+        driver_by_id[result.driver_id].years_active.add(race.date.year)
+        driver_by_id[result.driver_id].race_ids.add(race.race_id)
+
+
+def populate_driver_pairings(
+    race_by_id: dict[int, Race],
+    result_by_id: dict[int, Result],
+    driver_by_id: dict[int, Driver],
+    ctor_by_id: dict[int, Ctor],
+) -> dict[tuple[int, int], DriverPair]:
+    driver_pair_by_id: dict[tuple[int, int], DriverPair] = dict()
+
+    for race in race_by_id.values():
+        for ctor_id in race.ctors:
+            pair: list[int, int] = list()
+            for result_id in race.results:
+                result: Result = result_by_id[result_id]
+                if result.constructor_id == ctor_id:
+                    pair.append(result.driver_id)
+
+            # temporary fix for if only one driver
+            # TODO: Change this to add drivers that didn't race with teammates
+            if len(pair) != 2:
+                driver_id = pair[0]
+                driver_by_id[driver_id].years_by_ctor.setdefault(ctor_id, set()).add(
+                    race.date.year
+                )
                 continue
-            if row['number'] == r'\N':
-                row['number'] = None
-            drivers[int(row['driverId'])] = (Driver(**row))
-        return drivers
+
+            # smaller driver_id goes first, to avoid duplicates
+            driver_id1 = min(pair)
+            driver_id2 = max(pair)
+            driver_pair_id = driver_id1, driver_id2
+
+            driver_pair: DriverPair = driver_pair_by_id.setdefault(
+                driver_pair_id, DriverPair(*driver_pair_id)
+            )
+
+            # add current race info to pair
+            driver_pair.race_ids.add(race.race_id)
+            driver_pair.years_by_ctor.setdefault(ctor_id, set()).add(race.date.year)
+
+            # link pair to drivers and ctor
+            driver_by_id[driver_id1].driver_pairs.add(driver_pair_id)
+            driver_by_id[driver_id1].years_by_ctor.setdefault(ctor_id, set()).add(
+                race.date.year
+            )
+
+            driver_by_id[driver_id2].driver_pairs.add(driver_pair_id)
+            driver_by_id[driver_id2].years_by_ctor.setdefault(ctor_id, set()).add(
+                race.date.year
+            )
+
+            ctor_by_id[ctor_id].driver_pair_ids.add(driver_pair_id)
+
+    return driver_pair_by_id
 
 
-def add_teammates(race: list[tuple[int, int]]) -> None:
-    done_set = set()
-    for d1, c1 in race:
-        if d1 not in done_set:
-            for d2, c2 in race:
-                if (c1 == c2) and (d1 != d2):
-                    if d1 in drivers and d2 in drivers:
-                        drivers[d1].teammates.add(d2)
-                        drivers[d2].teammates.add(d1)
+def to_cytoscape_data(
+    driver_by_id: dict[int, Driver],
+    ctor_by_id: dict[int, Ctor],
+    driver_pair_by_id: dict[tuple[int, int], DriverPair],
+    min_year: int = 0,
+    max_year: int = 9999,
+) -> None:
+    seen = set()  # used to only add edges with both drivers in year range
+    nodes = []
+    year_range: set[int] = set([i for i in range(min_year, max_year + 1)])
+
+    for id in driver_by_id:
+        driver: Driver = driver_by_id[id]
+        if len(driver.driver_pairs) == 0:
+            continue  # do not include drivers with no teammates
+        if driver.years_active & year_range:
+            nodes.append(
+                {
+                    "data": {
+                        "id": str(id),
+                        "displayCtorId": "0",  # default, will get changed
+                        "name": str(driver),
+                        "codename": driver.codename,
+                        "forename": driver.forename,
+                        "surname": driver.surname,
+                        # "yearsActive": sorted(list(driver.years_active)), Not using for now, because same info in yearsByCtor
+                        "yearsByCtor": sorted(
+                            [
+                                {
+                                    "ctor": ctor_by_id[ctor_id].name,
+                                    "ctorId": str(ctor_id),
+                                    "years": sorted(years),
+                                }
+                                for ctor_id, years in driver.years_by_ctor.items()
+                            ],
+                            key=lambda pair: min(pair["years"]),
+                        ),
+                        "raceCount": len(driver.race_ids),
+                    }
+                }
+            ),
+            seen.add(id)
+
+    edges = [
+        {
+            "data": {
+                "source": str(driver_pair.driver_id_1),
+                "target": str(driver_pair.driver_id_2),
+                "displayCtorId": "0",  # default, will get changed
+                "yearsByCtor": sorted(
+                    [
+                        {
+                            "ctor": ctor_by_id[ctor_id].name,
+                            "ctorId": str(ctor_id),
+                            "years": sorted(years),
+                        }
+                        for ctor_id, years in driver_pair.years_by_ctor.items()
+                    ],
+                    key=lambda pair: max(pair["years"]),
+                ),
+            }
+        }
+        for driver_pair in driver_pair_by_id.values()
+        if driver_pair.driver_id_1 in seen and driver_pair.driver_id_2 in seen
+    ]
+
+    # Order the nodes from newest to oldest
+    #   - This is to fix a label chaching issue, where the last nodes in the list dont get their labels chached
+    #   - This was causing their labels to flicker. For now, put old nodes to end of list
+    #   - TODO: Come up with better solution, so that no labels flicker
+    nodes.sort(
+        key=lambda node: min(node["data"]["yearsByCtor"][0]["years"]), reverse=True
+    )
+    return {"nodes": nodes, "edges": edges}
+
+
+# creates map that frontend will use to style nodes / edges based on ctor
+def create_ctor_map(ctor_by_id: dict[int, Ctor]) -> list[dict[str, str]]:
+
+    return [
+        {
+            "id": "0",
+            "name": "CTOR_NOT_FOUND",
+            "colorPrimary": "#D4D4D4",
+            "colorSecondary": "#000000",
+        }
+    ] + [
+        {
+            "id": str(ctor.constructor_id),
+            "name": ctor.name,
+            "colorPrimary": ctor.color_primary if ctor.color_primary else "#D4D4D4",
+            "colorSecondary": ctor.color_secondary,
+        }
+        for ctor in ctor_by_id.values()
+    ]
+
+
+# Takes result JSON and populates race/result CSVs
+def process_new_json(
+    json_path: str,
+    race_csv_path: str,
+    result_csv_path: str,
+    driver_by_ref: dict[str, Driver],
+    ctor_by_ref: dict[str, Ctor],
+) -> None:
+
+    # Load existing CSV to find max raceId
+    with open(race_csv_path, newline="", encoding="utf-8") as f:
+        reader = csv.reader(f)
+        race_rows = list(reader)
+
+    race_header = race_rows[0]
+    race_data = race_rows[1:]
+    max_race_id = max(int(race[0]) for race in race_data if race[0].isdigit())
+
+    with open(result_csv_path, newline="", encoding="utf-8") as f:
+        reader = csv.reader(f)
+        result_rows = list(reader)
+
+    result_header = result_rows[0]
+    result_data = result_rows[1:]
+    max_result_id = max(int(result[0]) for result in result_data if result[0].isdigit())
+
+    # Load JSON races
+    with open(json_path, encoding="utf-8") as f:
+        races_json = json.load(f)
+
+    new_race_rows = []
+    new_result_rows = []
+    race_id = max_race_id
+    result_id = max_result_id
+
+    for race in races_json["MRData"]["RaceTable"]["Races"]:
+        race_id += 1
+        season = race.get("season")
+        round = race.get("round")
+        race_name = race.get("raceName")
+        url = race.get("url")
+        date = race.get("date")
+        time = race.get("time", None)  # Some JSONs include "time"
+
+        # For consistency with your example CSV structure
+        # Adjust indexes if your CSV has more columns
+        row = [
+            race_id,  # raceId
+            season,  # season (year)
+            round,  # round
+            "\\N",  # circuit ID
+            race_name,  # raceName
+            date,  # race date
+            time or "\\N",  # race time
+            url,  # wikipedia URL
+            "\\N",
+            "\\N",  # FP1 date/time
+            "\\N",
+            "\\N",  # FP2 date/time
+            "\\N",
+            "\\N",  # FP3 date/time
+            "\\N",
+            "\\N",  # Quali date/time
+            "\\N",
+            "\\N",  # Sprint date/time
+        ]
+        new_race_rows.append(row)
+
+        for result in race.get("Results"):
+            result_id += 1
+            driver_id = driver_by_ref[result.get("Driver").get("driverId")].driver_id
+            ctor_id = ctor_by_ref[
+                result.get("Constructor").get("constructorId")
+            ].constructor_id
+            number = int(result.get("Driver").get("permanentNumber"))
+            grid = int(result.get("grid"))
+            position = int(result.get("position"))
+            position_text = result.get("positionText")
+            points = int(result.get("points"))
+            position_order = laps = time = milliseconds = fastestLap = rank = (
+                fastestLapTime
+            ) = fastestLapSpeed = statusId = "\\N"
+            row = [
+                result_id,
+                race_id,
+                driver_id,
+                ctor_id,
+                number,
+                grid,
+                position,
+                position_text,
+                position_order,
+                points,
+                laps,
+                time,
+                milliseconds,
+                fastestLap,
+                rank,
+                fastestLapTime,
+                fastestLapSpeed,
+                statusId,
+            ]
+
+            new_result_rows.append(row)
+
+    # Write back out with new races appended
+    with open("data/new_races.csv", "w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(race_header)
+        writer.writerows(race_data + new_race_rows)
+
+    with open("data/new_results.csv", "w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(result_header)
+        writer.writerows(result_data + new_result_rows)
+
     pass
 
 
-def build_graph() -> nx.Graph:
-    G = nx.Graph()
+# # MAIN LOADER CODE
 
-    for id, driver in drivers.items():
-        G.add_node(id, name=drivers[id].driverRef)
+driver_by_id, driver_by_ref = load_drivers("data/drivers.csv")
+ctor_by_id, ctor_by_ref = load_ctors("data/constructors.csv")
+result_by_id = load_results("data/new_results.csv")
+race_by_id = load_races("data/new_races.csv")
+process_results(race_by_id, result_by_id, driver_by_id)
 
-        for tm_id in driver.teammates:
-            if id < tm_id:
-                G.add_edge(id, tm_id)
+driver_pair_by_id = populate_driver_pairings(
+    race_by_id, result_by_id, driver_by_id, ctor_by_id
+)
 
-    return G
+with open("dump.json", "w") as f:
+    f.write(
+        json.dumps(
+            to_cytoscape_data(driver_by_id, ctor_by_id, driver_pair_by_id, 0, 2025)
+        )
+    )
 
-
-# largest_cc = max(nx.connected_components(G), key=len)
-# subgraph = G.subgraph(largest_cc)
-# diameter = nx.diameter(subgraph)
-# print(diameter)
-
-# Find the node pair with the max shortest path length
-
-def longest_shortest_path(G):
-    # Optionally limit to largest connected component
-    if not nx.is_connected(G):
-        G = G.subgraph(max(nx.connected_components(G), key=len))
-
-    all_pairs = dict(nx.all_pairs_shortest_path_length(G))
-    max_len = -1
-    pair = (None, None)
-
-    for u in all_pairs:
-        for v, dist in all_pairs[u].items():
-            if dist > max_len:
-                max_len = dist
-                pair = (u, v)
-
-    path = nx.shortest_path(G, source=pair[0], target=pair[1])
-    return path
-
-
-def longest_simple_path(G: nx.Graph, source, target) -> list[int]:
-    longest_path = []
-
-    def dfs(path, visited):
-        nonlocal longest_path
-        current = path[-1]
-
-        if current == target:
-            if len(path) > len(longest_path):
-                longest_path = path[:]
-            return
-
-        for neighbor in G.neighbors(current):
-            if neighbor not in visited:
-                visited.add(neighbor)
-                path.append(neighbor)
-                dfs(path, visited)
-                path.pop()
-                visited.remove(neighbor)
-
-    dfs([source], {source})
-    return longest_path
-
-
-seen = set()
-
-
-def print_teammates(driverId: int, depth: int = 1, indent: int = 0) -> None:
-    if depth == 0 or driverId in seen:
-        return
-    seen.add(driverId)
-
-    for tm in drivers[driverId].teammates:
-        for _ in range(indent):
-            print(' ', end='')
-        print(drivers[tm].driverRef)
-        print_teammates(tm, depth - 1, indent + 2)
-
-def to_cytoscape_data(G):
-    nodes = [
-        {"data": {"id": str(n), **G.nodes[n]}}
-        for n in G.nodes
-    ]
-    edges = [
-        {"data": {"source": str(u), "target": str(v), **G.edges[u, v]}}
-        for u, v in G.edges
-    ]
-    return {"nodes": nodes, "edges": edges}
+with open("../frontend/src/data/ctorMap.json", "w") as f:
+    f.write(json.dumps(create_ctor_map(ctor_by_id)))
 
 app = FastAPI()
 
 
-
-# @app.get("/")
-# async def root():
-#     return {"message": "Hello World"}
-
-    
-drivers = load_drivers('data/drivers.csv')
-
-# key will be raceId, val will be list of (driverId, constructorId)
-def load_results(filename: str) -> dict[int, tuple[int,int]]:
-    map = {}
-    with open(filename, newline='', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-
-        for row in reader:
-            map.setdefault(int(row['raceId']), []).append(
-                (int(row['driverId']), int(row['constructorId'])))
-        return map
-
-races = load_races('data/races.csv')
-results = load_results('data/results.csv')
-for result in results.values():
-    add_teammates(result)
-
-# G = build_graph()
-# path = nx.shortest_path(G, source=835, target=592)
-# # path = longest_shortest_path(G)
-# for id in path:
-#     print(drivers[id].forename + ' ' + drivers[id].surname)
-
-
-
-
 @app.get("/graph")
 def get_graph():
-    G = build_graph()  # your graph-building function
-    data = to_cytoscape_data(G)
-    return JSONResponse(content=data)
+    return to_cytoscape_data(driver_by_id, ctor_by_id, driver_pair_by_id, 0, 2025)
+
+
+# process_new_json(
+#     "data/2025/f1_2025_results_pt1.json", "data/races.csv", "data/results.csv",
+#     driver_by_ref, ctor_by_ref
+# )

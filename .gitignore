@@ -143,11 +143,8 @@ venv/
 */venv/
 
 # Ignore Python cache
-/backend/__pycache__/
-*/__pycache__/
-*.pyc
-*.pyo
-*.pyd
+__pycache__/
+*.py[cod]
 
 # Ignore common environment/IDE stuff
 .env
@@ -157,4 +154,7 @@ venv/
 dist/
 
 # Config files
-/frontent/.prettierrc.json
+.prettierrc.json
+
+# test files
+/backend/dump.json
