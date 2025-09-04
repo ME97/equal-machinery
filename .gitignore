@@ -154,3 +154,6 @@ venv/
 *.swp
 
 dist/
+
+# Config files
+/frontent/.prettierrc.json
