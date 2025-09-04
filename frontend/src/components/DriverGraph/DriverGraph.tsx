@@ -179,7 +179,7 @@ export default function DriverGraph() {
     //   .catch((err) => console.error('Error fetching graph:', err));
 
     // Static presentation for demo on pages
-    fetch("/data/graph.json")
+    fetch(process.env.PUBLIC_URL + "/data/graph.json")
       .then((res) => res.json())
       .then((data) => setElements([...data.nodes, ...data.edges]))
       .catch((err) => console.error("Error fetching graph:", err));
@@ -311,6 +311,7 @@ export default function DriverGraph() {
 
         edge.data("displayCtorId", ctorId);
       });
+      centerViewport(cy);
     }
   }, [minDisplayYear, maxDisplayYear, minDisplayRaceCount, elements]);
 

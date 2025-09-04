@@ -158,3 +158,6 @@ dist/
 
 # test files
 /backend/dump.json
+
+# Build
+frontend/build
