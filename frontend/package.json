@@ -9,8 +9,6 @@
     "@testing-library/user-event": "^13.5.0",
     "@types/jest": "^27.5.2",
     "@types/node": "^16.18.126",
-    "@types/react": "^19.1.8",
-    "@types/react-dom": "^19.1.6",
     "cytoscape": "^3.32.1",
     "cytoscape-cose-bilkent": "^4.1.0",
     "html-webpack-plugin": "^5.6.4",
@@ -28,7 +26,7 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d build -r git@github.com:ME97/equal-machinery.git"
+    "deploy": "branch=$(git rev-parse --abbrev-ref HEAD); if [ \"$branch\" = \"main\" ]; then gh-pages -d build -r git@github.com:ME97/equal-machinery.git; else echo '🚫 Deploys are only allowed from main branch (you are on '$branch')'; exit 1; fi"
   },
   "eslintConfig": {
     "extends": [
@@ -49,6 +47,8 @@
     ]
   },
   "devDependencies": {
+    "@types/react": "^19.1.12",
+    "@types/react-dom": "^19.1.9",
     "gh-pages": "^6.3.0"
   },
   "homepage": "https://ME97.github.io/equal-machinery/"

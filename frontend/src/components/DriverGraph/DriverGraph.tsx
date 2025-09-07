@@ -1,7 +1,7 @@
 // src/components/DriverGraph.tsx
 
 /* IMPORTS */
-import { useEffect, useState, useRef, useMemo, useCallback } from "react";
+import { JSX, useEffect, useState, useRef, useMemo, useCallback } from "react";
 import cytoscape, {
   Core,
   EdgeSingular,
@@ -16,6 +16,7 @@ import { Range, Direction, getTrackBackground } from "react-range";
 /* STATIC JSON */
 import nodePositionJSON from "../../data/nodePositions.json";
 import ctorMapJSON from "../../data/ctorMap.json";
+import { reverse } from "dns";
 
 cytoscape.use(coseBilkent);
 
@@ -155,6 +156,7 @@ function removeElementFromForeground(element: any): void {
 export default function DriverGraph() {
   const [elements, setElements] = useState<(NodeData | EdgeData)[]>([]);
   const [selectedInfo, setSelectedInfo] = useState<string | null>(null);
+  const [displayedInfo, setDisplayedInfo] = useState<JSX.Element[]>([]);
   const [selectedDrivers, setSelectedDrivers] = useState<string[]>([]);
   const [minDisplayYear, setMinDisplayYear] = useState(
     DEFAULT_MIN_DISPLAY_YEAR
@@ -205,59 +207,6 @@ export default function DriverGraph() {
       layout.run();
       centerViewport(cy);
       cy.autolock(true);
-
-      // cose-bilkent default options
-      // const coseBilkentDefaultOptions = {
-      //   quality: 'default',
-      //   // Whether to include labels in node dimensions. Useful for avoiding label overlap
-      //   nodeDimensionsIncludeLabels: true,
-      //   // number of ticks per frame; higher is faster but more jerky
-      //   refresh: 30,
-      //   // Whether to fit the network view after when done
-      //   fit: true,
-      //   // Padding on fit
-      //   padding: 30,
-      //   // Whether to enable incremental mode
-      //   randomize: false,
-      //   // Node repulsion (non overlapping) multiplier (default 4500, might need to bump higher with more nodes)
-      //   nodeRepulsion: 1000,
-      //   // Ideal (intra-graph) edge length
-      //   idealEdgeLength: 200,
-      //   // Divisor to compute edge forces
-      //   edgeElasticity: 0.45,
-      //   // Nesting factor (multiplier) to compute ideal edge length for inter-graph edges
-      //   nestingFactor: 0.1,
-      //   // Gravity force (constant), default 0.25
-      //   gravity: 0.1,
-      //   // Maximum number of iterations to perform
-      //   numIter: 2500,
-      //   // Whether to tile disconnected nodes
-      //   tile: true,
-      //   // Type of layout animation. The option set is {'during', 'end', false}
-      //   animate: false,
-      //   // Duration for animate:end
-      //   animationDuration: 500,
-      //   // Amount of vertical space to put between degree zero nodes during tiling (can also be a function)
-      //   tilingPaddingVertical: 10,
-      //   // Amount of horizontal space to put between degree zero nodes during tiling (can also be a function)
-      //   tilingPaddingHorizontal: 10,
-      //   // Gravity range (constant) for compounds
-      //   gravityRangeCompound: 1.5,
-      //   // Gravity force (constant) for compounds
-      //   gravityCompound: 1.0,
-      //   // Gravity range (constant)
-      //   gravityRange: 3.8,
-      //   // Initial cooling factor for incremental layout
-      //   initialEnergyOnIncremental: 0.5,
-      //   spacingFactor: 1.25,
-      //   // nodeOverlap: diameter,
-      // };
-
-      // // layout using force directed algorithm (slow for entire graph)
-      // cy.layout({
-      //   name: 'cose-bilkent',
-      //   ...coseBilkentDefaultOptions,
-      // }).run();
     }
   }, [elements]);
 
@@ -291,7 +240,7 @@ export default function DriverGraph() {
     }
   }, [selectedDrivers]);
 
-  // // update visible nodes on year range change
+  // update visible nodes on year range change
   useEffect(() => {
     const cy = cyRef.current;
     if (cy) {
@@ -510,12 +459,92 @@ export default function DriverGraph() {
       //   }
       // });
 
+      // cy.on("tap", "node", (event: EventObject) => {
+      //   const node = event.target;
+      //   addElementToForeground(node);
+      //   node.neighborhood().forEach((edge: EdgeSingular) => {
+      //     addElementToForeground(edge);
+      //   });
+      // });
+
       cy.on("tap", "node", (event: EventObject) => {
         const node = event.target;
-        addElementToForeground(node);
-        node.neighborhood().forEach((edge: EdgeSingular) => {
-          addElementToForeground(edge);
-        });
+        const yearsByCtor = node.data("yearsByCtor");
+
+        const infoDivs = [
+          <div
+            style={{
+              padding: "0.5rem",
+              marginBottom: "0.5rem",
+              backgroundColor:
+                ctorMap[node.data("displayCtorId")]?.colorPrimary || "#000000",
+              borderRadius: "0.5rem",
+              border: "4px solid #222",
+              color: "white",
+              textShadow: "1px 1px 2px black, -1px -1px 2px black",
+              textAlign: "center",
+              fontWeight: "bold",
+              fontSize: "1.1rem",
+            }}
+          >
+            {node.data("name")}
+          </div>,
+          ...[...yearsByCtor].reverse().map((ybc: YearsByCtor, idx: number) => (
+            <div
+              key={idx}
+              style={{
+                padding: "0.5rem",
+                marginBottom: "0.5rem",
+                width: "80%", 
+                backgroundColor: ctorMap[ybc.ctorId]?.colorPrimary || "#000000",
+                borderRadius: "0.5rem",
+                border: "4px solid #222", // 👈 add this
+                borderColor:
+                  ctorMap[ybc.ctorId]?.colorSecondary ||
+                  // ctorMap[ybc.ctorId]?.colorPrimary ||
+                  "#000000",
+                color: "white",
+                textShadow: "1px 1px 2px black, -1px -1px 2px black",
+              }}
+            >
+              <div style={{ fontWeight: "bold", fontSize: "1.1rem" }}>
+                {ybc.ctor}
+              </div>
+              <div style={{ marginTop: "0.25rem", fontSize: "0.9rem" }}>
+                {ybc.years.join(", ")}
+              </div>
+            </div>
+          )),
+        ];
+
+        setDisplayedInfo(infoDivs);
+      });
+
+      // Edge click
+      // cy.on("tap", "edge", (evt) => {
+      //   const edge = evt.target;
+      //   const infoDiv = (
+      //     <div
+      //       style={{
+      //         padding: "0.5rem",
+      //         marginBottom: "0.5rem",
+      //         backgroundColor: "#666",
+      //         borderRadius: "0.5rem",
+      //         color: "white",
+      //       }}
+      //     >
+      //       Edge from {edge.source().id()} → {edge.target().id()}
+      //     </div>
+      //   );
+
+      //   setSelectedInfo([infoDiv]);
+      // });
+
+      // Clear on background click
+      cy.on("tap", (event: EventObject) => {
+        if (event.target === cy) {
+          setDisplayedInfo([]);
+        }
       });
 
       cy.on("mouseover", "node", (event: EventObject) => {
@@ -631,7 +660,7 @@ export default function DriverGraph() {
             flexWrap: "wrap",
             alignItems: "center",
             height: "15%",
-            width: "100%",
+            width: "80%",
 
             // settings to allow timeline to float over graph
             background: "transparent",
@@ -707,7 +736,7 @@ export default function DriverGraph() {
                 </div>
               </div>
             )}
-            renderThumb={({ index, props, isDragged }) => (
+            renderThumb={({ index, props }) => (
               <div
                 {...props}
                 key={props.key}
@@ -747,27 +776,40 @@ export default function DriverGraph() {
       </div>
 
       {/* Display Panel*/}
-      {/* <div
+      <div
         style={{
-          width: '15%', // quarter width
-          backgroundColor: '#fafafa',
-          borderLeft: '1px solid #ddd',
-          padding: '1rem',
-          overflowY: 'auto',
+          height: "100%",
+          width: "20%",
+          minWidth: "300px",
+          maxWidth: "100vw",
+          zIndex: 10,
+          boxShadow: "0 0 1em #000",
+          backgroundColor: "#444",
+          opacity: 1,
+          overflowY: "auto",
+          alignItems:'center'
         }}
       >
         <h2
           style={{
-            fontSize: '1.2rem',
-            fontWeight: 'bold',
-            marginBottom: '0.5rem',
-            textAlign: 'center',
+            fontSize: "1.2rem",
+            fontWeight: "bold",
+            marginBottom: "0.5rem",
+            textAlign: "center",
           }}
         >
           Equal Machinery
         </h2>
-        {selectedInfo}
-        <button
+        {displayedInfo.length > 0 ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", alignItems: 'center'}}>
+  {displayedInfo}
+</div>
+        ) : (
+          <p style={{ color: "#aaa", textAlign: "center" }}>
+            Click a node or edge
+          </p>
+        )}
+        {/* <button
           onClick={() => {
             savePositions(cyRef.current);
           }}
@@ -780,8 +822,8 @@ export default function DriverGraph() {
           }}
         >
           Center Viewport
-        </button>
-      </div> */}
+        </button> */}
+      </div>
     </div>
   );
 }
