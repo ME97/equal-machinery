@@ -18,6 +18,9 @@ import { Range, Direction, getTrackBackground } from 'react-range';
 import nodePositionJSON from '../../data/nodePositions.json';
 import ctorMapJSON from '../../data/ctorMap.json';
 
+/* CSS */
+import './DriverGraph.css';
+
 cytoscape.use(coseBilkent);
 
 /* GLOBAL CONSTANTS */
@@ -260,7 +263,6 @@ export default function DriverGraph() {
     const sourceName: string = cy.getElementById(`${sourceId}`).data('name');
     const targetName: string = cy.getElementById(`${targetId}`).data('name');
 
-
     // check if path was not found
     if (path.length === 1) {
       setSelectedInfo(`No path from ${sourceName} to ${targetName}`);
@@ -419,45 +421,33 @@ export default function DriverGraph() {
         const infoDivs = [
           <div
             key={index++}
+            className="driverInfoDiv"
             style={{
-              padding: '0.5rem',
-              marginBottom: '0.5rem',
               backgroundColor: ctorMap[node.data('displayCtorId')]?.colorPrimary || '#000000',
-              borderRadius: '0.5rem',
-              border: '4px solid #222',
               borderColor: ctorMap[node.data('displayCtorId')]?.colorSecondary || '#000000',
-              boxShadow: '0 0 1em #000',
-              zIndex: 11,
-              color: 'white',
-              textShadow: '1px 1px 2px black, -1px -1px 2px black',
-              textAlign: 'center',
-              fontWeight: 'bold',
-              fontSize: '1.1rem',
             }}
           >
             {node.data('name')}
           </div>,
-          ...teammatesByYearByCtor.map(({ctorId, years}) => (
+          ...teammatesByYearByCtor.map(({ ctorId, years }) => (
             <div
               key={index++}
+              className="driverTeamsInfoDiv"
               style={{
-                padding: '0.5rem',
-                marginBottom: '0.5rem',
-                width: '80%',
                 backgroundColor: ctorMap[ctorId]?.colorPrimary || '#000000',
-                borderRadius: '0.5rem',
-                border: '4px solid #222',
                 borderColor: ctorMap[ctorId]?.colorSecondary || '#000000',
-                boxShadow: '0 0 1em #000',
-                zIndex: 11,
-                color: 'white',
-                textShadow: '1px 1px 4px black, -1px -1px 4px black',
               }}
             >
               <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{ctorMap[ctorId].name}</div>
               {years.map(([year, teammates]) => (
                 <div key={index++}>
-                  {year}: {teammates.map((driverId => cy.getElementById(`${driverId}`).data('surname'))).join(', ')}
+                  {year}:{' '}
+                  {teammates
+                    .map((driverId) => {
+                      const el = cy.getElementById(`${driverId}`);
+                      return el.data('forename')[0] + '. ' + el.data('surname');
+                    })
+                    .join(', ')}
                 </div>
               ))}
             </div>
@@ -477,40 +467,22 @@ export default function DriverGraph() {
         const infoDivs = [
           <div
             key={index++}
+            className="driverInfoDiv"
             style={{
-              padding: '0.5rem',
-              marginBottom: '0.5rem',
-              width: '90%',
-              backgroundColor: ctorMap[edge.data('displayCtorId')]?.colorPrimary || '#000000',
-              borderRadius: '0.5rem',
-              border: '4px solid #222',
               borderColor: ctorMap[edge.data('displayCtorId')]?.colorSecondary || '#000000',
-              boxShadow: '0 0 1em #000',
-              zIndex: 11,
-              color: 'white',
-              textShadow: '1px 1px 2px black, -1px -1px 2px black',
-              textAlign: 'center',
-              fontWeight: 'bold',
-              fontSize: '1.1rem',
+              backgroundColor: ctorMap[edge.data('displayCtorId')]?.colorPrimary || '#000000',
             }}
           >
-            {`${driver1Name} was teammates with ${driver2Name} at:`}
+            <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{driver1Name}</div>
+            <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{driver2Name}</div>
           </div>,
           ...[...yearsByCtor].reverse().map((ybc: YearsByCtor) => (
             <div
               key={index++}
+              className="driverTeamsInfoDiv"
               style={{
-                padding: '0.5rem',
-                marginBottom: '0.5rem',
-                width: '80%',
                 backgroundColor: ctorMap[ybc.ctorId]?.colorPrimary || '#000000',
-                borderRadius: '0.5rem',
-                border: '4px solid #222',
                 borderColor: ctorMap[ybc.ctorId]?.colorSecondary || '#000000',
-                color: 'white',
-                textShadow: '1px 1px 2px black, -1px -1px 2px black',
-                boxShadow: '0 0 1em #000',
-                zIndex: 11,
               }}
             >
               <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{ybc.ctor}</div>
@@ -605,14 +577,9 @@ export default function DriverGraph() {
   }, []);
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        height: '100vh', // full screen height
-      }}
-    >
+    <div id="mainContainer">
       {/* Graph and Timeline Container*/}
-      <div id="cy" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <div id="cyContainer">
         {/* Graph */}
         <div style={{ flex: 1 }}>
           <CytoscapeComponent
@@ -625,23 +592,7 @@ export default function DriverGraph() {
         </div>
 
         {/* Timeline Slider */}
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            height: '15%',
-            width: '80%',
-
-            // settings to allow timeline to float over graph
-            background: 'transparent',
-            position: 'absolute',
-            bottom: '0px',
-            left: '20px',
-          }}
-        >
+        <div id="timelineContainer">
           <Range
             allowOverlap={true}
             draggableTrack={true} // enabling this means can't click track to go to year
@@ -749,32 +700,7 @@ export default function DriverGraph() {
       </div>
 
       {/* Display Panel*/}
-      <div
-        style={{
-          height: '100%',
-          width: '20%',
-          minWidth: '300px',
-          maxWidth: '100vw',
-          zIndex: 10,
-          boxShadow: '0 0 1em #000',
-          backgroundColor: '#444',
-          opacity: 1,
-          overflowY: 'auto',
-          boxSizing: 'border-box',
-          alignItems: 'center',
-          padding: '10px',
-        }}
-      >
-        {/* <h2
-          style={{
-            fontSize: '1.2rem',
-            fontWeight: 'bold',
-            marginBottom: '0.5rem',
-            textAlign: 'center',
-          }}
-        >
-          Equal Machinery
-        </h2> */}
+      <div id="displayPanel">
         {displayedInfo.length > 0 ? (
           <div
             style={{
@@ -789,20 +715,6 @@ export default function DriverGraph() {
         ) : (
           <p style={{ color: '#aaa', textAlign: 'center' }}>Click a node or edge</p>
         )}
-        {/* <button
-          onClick={() => {
-            savePositions(cyRef.current);
-          }}
-        >
-          Save Positions
-        </button>
-        <button
-          onClick={() => {
-            centerViewport(cyRef.current);
-          }}
-        >
-          Center Viewport
-        </button> */}
       </div>
     </div>
   );
