@@ -4,6 +4,11 @@ export type YearsByCtor = {
   years: number[]; // sorted array of years driver (or driver pair) raced on team [ctor]
 };
 
+export type TeammatesByYearByCtor= {
+  ctorId: number;
+  years: [number, number[]][]; // [year [teammate_id]]
+};
+
 export type NodeData = {
   data: {
     id: string;
@@ -11,7 +16,8 @@ export type NodeData = {
     codename: string;
     forename: string;
     surname: string;
-    yearsByCtor: YearsByCtor[]; // TODO: We hold this info in nodes and edges
+    yearsByCtor: YearsByCtor[];
+    teammatesByYearByCtor: TeammatesByYearByCtor[];
     displayCtor?: string; // ctor used for node colouring
     displayCtorId?: string;
     raceCount?: number; 

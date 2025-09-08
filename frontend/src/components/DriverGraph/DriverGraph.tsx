@@ -5,13 +5,18 @@ import { JSX, useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import cytoscape, { Core, EdgeSingular, EventObject, NodeSingular } from 'cytoscape';
 import CytoscapeComponent from 'react-cytoscapejs';
 import coseBilkent from 'cytoscape-cose-bilkent';
-import { NodeData, EdgeData, YearsByCtor, CtorData } from './DriverGraph.types';
+import {
+  NodeData,
+  EdgeData,
+  YearsByCtor,
+  TeammatesByYearByCtor,
+  CtorData,
+} from './DriverGraph.types';
 import { Range, Direction, getTrackBackground } from 'react-range';
 
 /* STATIC JSON */
 import nodePositionJSON from '../../data/nodePositions.json';
 import ctorMapJSON from '../../data/ctorMap.json';
-import { reverse } from 'dns';
 
 cytoscape.use(coseBilkent);
 
@@ -255,7 +260,6 @@ export default function DriverGraph() {
     const sourceName: string = cy.getElementById(`${sourceId}`).data('name');
     const targetName: string = cy.getElementById(`${targetId}`).data('name');
 
-    console.log(path[0].data('name'));
 
     // check if path was not found
     if (path.length === 1) {
@@ -287,7 +291,6 @@ export default function DriverGraph() {
       }
     }
     const pathString = parts.join(' -> ');
-    console.log(pathString);
     setSelectedInfo(pathString);
   }
 
@@ -410,10 +413,12 @@ export default function DriverGraph() {
       /* EVENT LISTENERS */
       cy.on('tap', 'node', (event: EventObject) => {
         const node: NodeSingular = event.target;
-        const yearsByCtor = node.data('yearsByCtor');
+        const teammatesByYearByCtor: TeammatesByYearByCtor[] = node.data('teammatesByYearByCtor');
 
+        let index: number = 0;
         const infoDivs = [
           <div
+            key={index++}
             style={{
               padding: '0.5rem',
               marginBottom: '0.5rem',
@@ -432,25 +437,29 @@ export default function DriverGraph() {
           >
             {node.data('name')}
           </div>,
-          ...[...yearsByCtor].reverse().map((ybc: YearsByCtor, idx: number) => (
+          ...teammatesByYearByCtor.map(({ctorId, years}) => (
             <div
-              key={idx}
+              key={index++}
               style={{
                 padding: '0.5rem',
                 marginBottom: '0.5rem',
                 width: '80%',
-                backgroundColor: ctorMap[ybc.ctorId]?.colorPrimary || '#000000',
+                backgroundColor: ctorMap[ctorId]?.colorPrimary || '#000000',
                 borderRadius: '0.5rem',
                 border: '4px solid #222',
-                borderColor: ctorMap[ybc.ctorId]?.colorSecondary || '#000000',
+                borderColor: ctorMap[ctorId]?.colorSecondary || '#000000',
                 boxShadow: '0 0 1em #000',
                 zIndex: 11,
                 color: 'white',
-                textShadow: '1px 1px 2px black, -1px -1px 2px black',
+                textShadow: '1px 1px 4px black, -1px -1px 4px black',
               }}
             >
-              <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{ybc.ctor}</div>
-              <div style={{ marginTop: '0.25rem', fontSize: '0.9rem' }}>{ybc.years.join(', ')}</div>
+              <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{ctorMap[ctorId].name}</div>
+              {years.map(([year, teammates]) => (
+                <div key={index++}>
+                  {year}: {teammates.map((driverId => cy.getElementById(`${driverId}`).data('surname'))).join(', ')}
+                </div>
+              ))}
             </div>
           )),
         ];
@@ -463,13 +472,11 @@ export default function DriverGraph() {
         const yearsByCtor = edge.data('yearsByCtor');
         const driver1Name: string = edge.source().data('name') || edge.source().id();
         const driver2Name: string = edge.target().data('name') || edge.target().id();
-        const label = edge
-          .data('yearsByCtor')
-          .map((pair: YearsByCtor) => `${pair.ctor}[${pair.years.join(' ,')}]`)
-          .join(', ');
 
+        let index = 0;
         const infoDivs = [
           <div
+            key={index++}
             style={{
               padding: '0.5rem',
               marginBottom: '0.5rem',
@@ -489,9 +496,9 @@ export default function DriverGraph() {
           >
             {`${driver1Name} was teammates with ${driver2Name} at:`}
           </div>,
-          ...[...yearsByCtor].reverse().map((ybc: YearsByCtor, idx: number) => (
+          ...[...yearsByCtor].reverse().map((ybc: YearsByCtor) => (
             <div
-              key={idx}
+              key={index++}
               style={{
                 padding: '0.5rem',
                 marginBottom: '0.5rem',
@@ -514,26 +521,6 @@ export default function DriverGraph() {
 
         setDisplayedInfo(infoDivs);
       });
-
-      // Edge click
-      // cy.on("tap", "edge", (evt) => {
-      //   const edge = evt.target;
-      //   const infoDiv = (
-      //     <div
-      //       style={{
-      //         padding: "0.5rem",
-      //         marginBottom: "0.5rem",
-      //         backgroundColor: "#666",
-      //         borderRadius: "0.5rem",
-      //         color: "white",
-      //       }}
-      //     >
-      //       Edge from {edge.source().id()} → {edge.target().id()}
-      //     </div>
-      //   );
-
-      //   setSelectedInfo([infoDiv]);
-      // })
 
       // Clear on background click
       cy.on('tap', (event: EventObject) => {

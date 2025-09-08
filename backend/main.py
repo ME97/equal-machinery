@@ -120,10 +120,26 @@ def populate_driver_pairings(
                 race.date.year
             )
 
+            teammates: list = (
+                driver_by_id[driver_id1]
+                .teammates_by_year_by_ctor.setdefault(ctor_id, dict())
+                .setdefault(race.date.year, list())
+            )
+            if driver_id2 not in teammates:
+                teammates.append(driver_id2)
+
             driver_by_id[driver_id2].driver_pairs.add(driver_pair_id)
             driver_by_id[driver_id2].years_by_ctor.setdefault(ctor_id, set()).add(
                 race.date.year
             )
+
+            teammates: list = (
+                driver_by_id[driver_id2]
+                .teammates_by_year_by_ctor.setdefault(ctor_id, dict())
+                .setdefault(race.date.year, list())
+            )
+            if driver_id1 not in teammates:
+                teammates.append(driver_id1)
 
             ctor_by_id[ctor_id].driver_pair_ids.add(driver_pair_id)
 
@@ -136,7 +152,7 @@ def to_cytoscape_data(
     driver_pair_by_id: dict[tuple[int, int], DriverPair],
     min_year: int = 0,
     max_year: int = 9999,
-) -> None:
+) -> dict[str, dict]:
     seen = set()  # used to only add edges with both drivers in year range
     nodes = []
     year_range: set[int] = set([i for i in range(min_year, max_year + 1)])
@@ -166,6 +182,21 @@ def to_cytoscape_data(
                                 for ctor_id, years in driver.years_by_ctor.items()
                             ],
                             key=lambda pair: min(pair["years"]),
+                        ),
+                        "teammatesByYearByCtor": sorted(
+                            [
+                                {
+                                    "ctorId": ctorId,
+                                    "years": sorted(
+                                        [list(item) for item in years.items()],
+                                        key=lambda year: year[0], reverse=True),
+                                }
+                                for ctorId, years in driver.teammates_by_year_by_ctor.items()
+                            ],
+                            key=lambda pair: (
+                                min([year[0] for year in pair["years"]]),
+                                len(pair["years"]),
+                            ), reverse=True
                         ),
                         "raceCount": len(driver.race_ids),
                     }
@@ -357,6 +388,7 @@ process_results(race_by_id, result_by_id, driver_by_id)
 driver_pair_by_id = populate_driver_pairings(
     race_by_id, result_by_id, driver_by_id, ctor_by_id
 )
+
 
 with open("dump.json", "w") as f:
     f.write(
