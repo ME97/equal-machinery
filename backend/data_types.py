@@ -38,6 +38,9 @@ class Driver(MyBaseModel):
     years_by_ctor: dict[int, set[int]] = Field(
         default_factory=dict
     )  # mapping from ctor_id to list of years drivers drove together for that ctor
+    teammates_by_year_by_ctor: dict[int, dict[int, list[int]]] = Field(
+        default_factory=dict
+    ) # mapping from ctor_id to mapping from year to list of teammates in that year
     teammates: set[int] = Field(default_factory=set)  # set of teammates by driverId
     driver_pairs: set[tuple[int, int]] = Field(default_factory=set)
     race_ids: set[int] = Field(

@@ -1,21 +1,25 @@
 // src/components/DriverGraph.tsx
 
 /* IMPORTS */
-import { useEffect, useState, useRef, useMemo, useCallback } from "react";
-import cytoscape, {
-  Core,
-  EdgeSingular,
-  EventObject,
-  NodeSingular,
-} from "cytoscape";
-import CytoscapeComponent from "react-cytoscapejs";
-import coseBilkent from "cytoscape-cose-bilkent";
-import { NodeData, EdgeData, YearsByCtor, CtorData } from "./DriverGraph.types";
-import { Range, Direction, getTrackBackground } from "react-range";
+import { JSX, useEffect, useState, useRef, useMemo, useCallback } from 'react';
+import cytoscape, { Core, EdgeSingular, EventObject, NodeSingular } from 'cytoscape';
+import CytoscapeComponent from 'react-cytoscapejs';
+import coseBilkent from 'cytoscape-cose-bilkent';
+import {
+  NodeData,
+  EdgeData,
+  YearsByCtor,
+  TeammatesByYearByCtor,
+  CtorData,
+} from './DriverGraph.types';
+import { Range, Direction, getTrackBackground } from 'react-range';
 
 /* STATIC JSON */
-import nodePositionJSON from "../../data/nodePositions.json";
-import ctorMapJSON from "../../data/ctorMap.json";
+import nodePositionJSON from '../../data/nodePositions.json';
+import ctorMapJSON from '../../data/ctorMap.json';
+
+/* CSS */
+import './DriverGraph.css';
 
 cytoscape.use(coseBilkent);
 
@@ -39,7 +43,7 @@ function getMostCommonCtorId(
   yearMin: number = 0,
   yearMax: number = 9999
 ): string {
-  let defaultCtorId: string = "0";
+  let defaultCtorId: string = '0';
   if (yearsByCtor.length !== 0) {
     defaultCtorId = yearsByCtor.at(-1)!.ctorId;
     let maxCount = yearsByCtor
@@ -47,9 +51,7 @@ function getMostCommonCtorId(
       .years.filter((year) => yearMin <= year && year <= yearMax).length;
 
     for (let i = yearsByCtor.length - 2; i >= 0; --i) {
-      let count = yearsByCtor[i].years.filter(
-        (year) => yearMin <= year && year <= yearMax
-      ).length;
+      let count = yearsByCtor[i].years.filter((year) => yearMin <= year && year <= yearMax).length;
       if (count > maxCount) {
         maxCount = count;
         defaultCtorId = yearsByCtor[i].ctorId;
@@ -72,19 +74,13 @@ function updateNodeVisibility(
   maxYear: number
 ): void {
   cy.nodes().forEach((node: NodeSingular) => {
-    const ctorId: string = getMostCommonCtorId(
-      node.data("yearsByCtor"),
-      minYear,
-      maxYear
-    );
-    node.data("displayCtorId", ctorId);
+    const ctorId: string = getMostCommonCtorId(node.data('yearsByCtor'), minYear, maxYear);
+    node.data('displayCtorId', ctorId);
 
-    const yearsByCtor: YearsByCtor[] = node.data("yearsByCtor");
+    const yearsByCtor: YearsByCtor[] = node.data('yearsByCtor');
     if (
-      node.data("raceCount") >= minRaceCount &&
-      yearsByCtor.some((ctor) =>
-        ctor.years.some((year) => minYear <= year && year <= maxYear)
-      )
+      node.data('raceCount') >= minRaceCount &&
+      yearsByCtor.some((ctor) => ctor.years.some((year) => minYear <= year && year <= maxYear))
     ) {
       node.show();
     } else {
@@ -96,7 +92,7 @@ function updateNodeVisibility(
 // centerViewport(cy) fits the frame to the current visible elements, and adjust the zoom accordingly
 function centerViewport(cy: Core | null) {
   if (!cy) return;
-  cy.fit(cy.elements(":visible"), 30); // fit to visible elements
+  cy.fit(cy.elements(':visible'), 30); // fit to visible elements
   const fitZoom = cy.zoom();
   cy.minZoom(fitZoom * 0.85);
   cy.maxZoom(fitZoom * 5);
@@ -124,12 +120,12 @@ function savePositions(cy: Core | null) {
   }, {} as Record<string, { x: number; y: number }>);
 
   const blob = new Blob([JSON.stringify(positions, null, 2)], {
-    type: "application/json",
+    type: 'application/json',
   });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
+  const a = document.createElement('a');
   a.href = url;
-  a.download = "nodePositions.json";
+  a.download = 'nodePositions.json';
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -139,7 +135,7 @@ function addElementToForeground(element: any): void {
   try {
     element._private.rscratch.inDragLayer = true;
   } catch (e) {
-    console.warn("addElementToForeground fail");
+    console.warn('addElementToForeground fail');
   }
 }
 
@@ -148,23 +144,18 @@ function removeElementFromForeground(element: any): void {
   try {
     element._private.rscratch.inDragLayer = false;
   } catch (e) {
-    console.warn("removeElementFromForeground fail");
+    console.warn('removeElementFromForeground fail');
   }
 }
 
 export default function DriverGraph() {
   const [elements, setElements] = useState<(NodeData | EdgeData)[]>([]);
   const [selectedInfo, setSelectedInfo] = useState<string | null>(null);
+  const [displayedInfo, setDisplayedInfo] = useState<JSX.Element[]>([]);
   const [selectedDrivers, setSelectedDrivers] = useState<string[]>([]);
-  const [minDisplayYear, setMinDisplayYear] = useState(
-    DEFAULT_MIN_DISPLAY_YEAR
-  );
-  const [maxDisplayYear, setMaxDisplayYear] = useState(
-    DEFAULT_MAX_DISPLAY_YEAR
-  );
-  const [minDisplayRaceCount, setMinDisplayRaceCount] = useState(
-    DEFAULT_MIN_DISPLAY_RACE_COUNT
-  );
+  const [minDisplayYear, setMinDisplayYear] = useState(DEFAULT_MIN_DISPLAY_YEAR);
+  const [maxDisplayYear, setMaxDisplayYear] = useState(DEFAULT_MAX_DISPLAY_YEAR);
+  const [minDisplayRaceCount, setMinDisplayRaceCount] = useState(DEFAULT_MIN_DISPLAY_RACE_COUNT);
   const [sliderThumbValues, setSliderThumbValues] = useState([
     DEFAULT_MIN_DISPLAY_YEAR,
     DEFAULT_MAX_DISPLAY_YEAR,
@@ -179,10 +170,10 @@ export default function DriverGraph() {
     //   .catch((err) => console.error('Error fetching graph:', err));
 
     // Static presentation for demo on pages
-    fetch(process.env.PUBLIC_URL + "/data/graph.json")
+    fetch(process.env.PUBLIC_URL + '/data/graph.json')
       .then((res) => res.json())
       .then((data) => setElements([...data.nodes, ...data.edges]))
-      .catch((err) => console.error("Error fetching graph:", err));
+      .catch((err) => console.error('Error fetching graph:', err));
   }, []);
 
   // run layout when elements are all loaded
@@ -191,12 +182,12 @@ export default function DriverGraph() {
       const cy = cyRef.current;
 
       const layout = cy.layout({
-        name: "preset",
+        name: 'preset',
         positions: nodePositionJSON,
       });
 
-      layout.on("layoutstop", () => {
-        cy.fit(cy.elements(":visible"), 30);
+      layout.on('layoutstop', () => {
+        cy.fit(cy.elements(':visible'), 30);
         const fitZoom = cy.zoom();
         cy.minZoom(fitZoom * 0.85);
         cy.maxZoom(fitZoom * 5);
@@ -205,59 +196,6 @@ export default function DriverGraph() {
       layout.run();
       centerViewport(cy);
       cy.autolock(true);
-
-      // cose-bilkent default options
-      // const coseBilkentDefaultOptions = {
-      //   quality: 'default',
-      //   // Whether to include labels in node dimensions. Useful for avoiding label overlap
-      //   nodeDimensionsIncludeLabels: true,
-      //   // number of ticks per frame; higher is faster but more jerky
-      //   refresh: 30,
-      //   // Whether to fit the network view after when done
-      //   fit: true,
-      //   // Padding on fit
-      //   padding: 30,
-      //   // Whether to enable incremental mode
-      //   randomize: false,
-      //   // Node repulsion (non overlapping) multiplier (default 4500, might need to bump higher with more nodes)
-      //   nodeRepulsion: 1000,
-      //   // Ideal (intra-graph) edge length
-      //   idealEdgeLength: 200,
-      //   // Divisor to compute edge forces
-      //   edgeElasticity: 0.45,
-      //   // Nesting factor (multiplier) to compute ideal edge length for inter-graph edges
-      //   nestingFactor: 0.1,
-      //   // Gravity force (constant), default 0.25
-      //   gravity: 0.1,
-      //   // Maximum number of iterations to perform
-      //   numIter: 2500,
-      //   // Whether to tile disconnected nodes
-      //   tile: true,
-      //   // Type of layout animation. The option set is {'during', 'end', false}
-      //   animate: false,
-      //   // Duration for animate:end
-      //   animationDuration: 500,
-      //   // Amount of vertical space to put between degree zero nodes during tiling (can also be a function)
-      //   tilingPaddingVertical: 10,
-      //   // Amount of horizontal space to put between degree zero nodes during tiling (can also be a function)
-      //   tilingPaddingHorizontal: 10,
-      //   // Gravity range (constant) for compounds
-      //   gravityRangeCompound: 1.5,
-      //   // Gravity force (constant) for compounds
-      //   gravityCompound: 1.0,
-      //   // Gravity range (constant)
-      //   gravityRange: 3.8,
-      //   // Initial cooling factor for incremental layout
-      //   initialEnergyOnIncremental: 0.5,
-      //   spacingFactor: 1.25,
-      //   // nodeOverlap: diameter,
-      // };
-
-      // // layout using force directed algorithm (slow for entire graph)
-      // cy.layout({
-      //   name: 'cose-bilkent',
-      //   ...coseBilkentDefaultOptions,
-      // }).run();
     }
   }, [elements]);
 
@@ -266,21 +204,21 @@ export default function DriverGraph() {
   useEffect(() => {
     const cy = cyRef.current;
     if (!cy) return;
-    cy.nodes().removeClass("highlighted faded");
+    cy.nodes().removeClass('highlighted faded');
 
     if (selectedDrivers.length === 1) {
       const driverId = selectedDrivers.at(0)!;
       const node = cy.getElementById(driverId);
-      node.addClass("highlighted");
+      node.addClass('highlighted');
       // const years_active = node.data('years_active').join(', ');
       // setSelectedInfo(
       //   `Selected: ${node.data('name')}, active during ${years_active}`
       // );
       const label = node
-        .data("yearsByCtor")
-        .map((pair: YearsByCtor) => `${pair.ctor}[${pair.years.join(" ,")}]`)
-        .join(", ");
-      setSelectedInfo(`Selected: ${node.data("name")}, raced for ${label}`);
+        .data('yearsByCtor')
+        .map((pair: YearsByCtor) => `${pair.ctor}[${pair.years.join(' ,')}]`)
+        .join(', ');
+      setSelectedInfo(`Selected: ${node.data('name')}, raced for ${label}`);
     } else if (selectedDrivers.length === 2) {
       highlightShortestPathInBrowser(selectedDrivers[0], selectedDrivers[1]);
     } else if (selectedDrivers.length === 3) {
@@ -291,49 +229,39 @@ export default function DriverGraph() {
     }
   }, [selectedDrivers]);
 
-  // // update visible nodes on year range change
+  // update visible nodes on year range change
   useEffect(() => {
     const cy = cyRef.current;
     if (cy) {
-      updateNodeVisibility(
-        cy,
-        minDisplayRaceCount,
-        minDisplayYear,
-        maxDisplayYear
-      );
+      updateNodeVisibility(cy, minDisplayRaceCount, minDisplayYear, maxDisplayYear);
 
       cy.edges().forEach((edge: EdgeSingular) => {
         const ctorId: string = getMostCommonCtorId(
-          edge.data("yearsByCtor"),
+          edge.data('yearsByCtor'),
           minDisplayYear,
           maxDisplayYear
         );
 
-        edge.data("displayCtorId", ctorId);
+        edge.data('displayCtorId', ctorId);
       });
       centerViewport(cy);
     }
   }, [minDisplayYear, maxDisplayYear, minDisplayRaceCount, elements]);
 
   // TODO: What if there are multiple shortest paths of same length?
-  function highlightShortestPathInBrowser(
-    sourceId: string,
-    targetId: string
-  ): void {
+  function highlightShortestPathInBrowser(sourceId: string, targetId: string): void {
     const cy = cyRef.current;
     if (!cy) return;
 
     // Clear previous highlighting
-    cy.elements().removeClass("highlighted faded");
+    cy.elements().removeClass('highlighted faded');
 
     // Use built-in Dijkstra (or use .aStar() if you want heuristics)
     const dijkstra = cy.elements().dijkstra({ root: `#${sourceId}` });
     const path = dijkstra.pathTo(cy.getElementById(targetId));
 
-    const sourceName: string = cy.getElementById(`${sourceId}`).data("name");
-    const targetName: string = cy.getElementById(`${targetId}`).data("name");
-
-    console.log(path[0].data("name"));
+    const sourceName: string = cy.getElementById(`${sourceId}`).data('name');
+    const targetName: string = cy.getElementById(`${targetId}`).data('name');
 
     // check if path was not found
     if (path.length === 1) {
@@ -342,16 +270,14 @@ export default function DriverGraph() {
     }
 
     // Highlight the path
-    path.addClass("highlighted");
+    path.addClass('highlighted');
 
     // Fade everything else
-    cy.elements().not(path).addClass("faded");
+    cy.elements().not(path).addClass('faded');
 
     // Show number of steps
     setSelectedInfo(
-      `Shortest path from ${sourceName} to ${targetName} is ${Math.floor(
-        path.length / 2
-      )} steps`
+      `Shortest path from ${sourceName} to ${targetName} is ${Math.floor(path.length / 2)} steps`
     );
 
     const parts = [];
@@ -359,15 +285,14 @@ export default function DriverGraph() {
     for (var i = 0; i < path.length; ++i) {
       const ele = path[i];
       if (ele.isNode()) {
-        parts.push(ele.data("name"));
+        parts.push(ele.data('name'));
       }
       if (ele.isEdge()) {
         // TODO: update this to be correct for the given year (maybe this is already handled with how label is set)
-        parts.push("NO_TEAM");
+        parts.push('NO_TEAM');
       }
     }
-    const pathString = parts.join(" -> ");
-    console.log(pathString);
+    const pathString = parts.join(' -> ');
     setSelectedInfo(pathString);
   }
 
@@ -375,97 +300,96 @@ export default function DriverGraph() {
   const cyStylesheet = useMemo(
     () => [
       {
-        selector: "node",
+        selector: 'node',
         style: {
-          label: "data(codename)",
-          color: "white",
-          "text-outline-color": "black",
-          "text-outline-width": 2,
-          shape: "ellipse",
+          label: 'data(codename)',
+          color: 'white',
+          'text-outline-color': 'black',
+          'text-outline-width': 2,
+          shape: 'ellipse',
           width: DEFAULT_NODE_DIAMETER,
           height: DEFAULT_NODE_DIAMETER,
-          "text-valign": "center",
-          "text-halign": "center",
-          "font-size": "14px",
-          "text-margin-y": "5px",
-          "text-max-width": "100px",
-          "border-width": 6,
-          "border-color": "#000000",
-          "border-opacity": 1,
+          'text-valign': 'center',
+          'text-halign': 'center',
+          'font-size': '14px',
+          'text-margin-y': '5px',
+          'text-max-width': '100px',
+          'border-width': 6,
+          'border-color': '#000000',
+          'border-opacity': 1,
 
           backgroundColor: (node: NodeSingular) =>
-            ctorMap[node.data("displayCtorId")].colorPrimary || "#000000",
+            ctorMap[node.data('displayCtorId')].colorPrimary || '#000000',
           // Use pie to create inner ring for secondary color
-          "pie-size": "100%",
-          "pie-hole": "85%",
-          "pie-1-background-color": (node: NodeSingular) =>
-            ctorMap[node.data("displayCtorId")].colorSecondary ||
-            ctorMap[node.data("displayCtorId")].colorPrimary ||
-            "#000000",
-          "pie-1-background-size": "100%",
+          'pie-size': '100%',
+          'pie-hole': '85%',
+          'pie-1-background-color': (node: NodeSingular) =>
+            ctorMap[node.data('displayCtorId')].colorSecondary ||
+            ctorMap[node.data('displayCtorId')].colorPrimary ||
+            '#000000',
+          'pie-1-background-size': '100%',
 
-          "transition-property": "background-color, width, height",
-          "transition-duration": "100ms",
+          'transition-property': 'background-color, width, height',
+          'transition-duration': '100ms',
         },
       },
       {
-        selector: "node.hovered",
+        selector: 'node.hovered',
         style: {
           width: DEFAULT_NODE_DIAMETER * NODE_HOVER_SCALE,
           height: DEFAULT_NODE_DIAMETER * NODE_HOVER_SCALE,
-          "transition-property": "width, height",
-          "transition-duration": "100ms",
+          'transition-property': 'width, height',
+          'transition-duration': '100ms',
         },
       },
       {
-        selector: "node.neighbor-hovered",
+        selector: 'node.neighbor-hovered',
         style: {
           width: DEFAULT_NODE_DIAMETER * 1.25,
           height: DEFAULT_NODE_DIAMETER * 1.25,
           // Use temporary hoverColor if present, otherwise fall back to displayCtorId
           backgroundColor: (node: NodeSingular) =>
-            node.data("hoverColor") ??
-            (ctorMap[node.data("displayCtorId")].colorPrimary || "#000000"),
-          "pie-1-background-color": (node: NodeSingular) =>
-            node.data("hoverColorSecondary") ??
-            (ctorMap[node.data("displayCtorId")].colorSecondary ||
-              ctorMap[node.data("displayCtorId")].colorPrimary ||
-              "#000000"),
-          "transition-property": "background-color, width, height",
-          "transition-duration": "100ms",
+            node.data('hoverColor') ??
+            (ctorMap[node.data('displayCtorId')].colorPrimary || '#000000'),
+          'pie-1-background-color': (node: NodeSingular) =>
+            node.data('hoverColorSecondary') ??
+            (ctorMap[node.data('displayCtorId')].colorSecondary ||
+              ctorMap[node.data('displayCtorId')].colorPrimary ||
+              '#000000'),
+          'transition-property': 'background-color, width, height',
+          'transition-duration': '100ms',
         },
       },
       {
-        selector: "edge",
+        selector: 'edge',
         style: {
           width: 4,
-          "line-color": "#aaaaaa",
-          "font-size": 12,
-          "text-rotation": "autorotate",
-          color: "white",
-          "text-outline-color": "black",
-          "text-outline-width": 2,
+          'line-color': '#aaaaaa',
+          'font-size': 12,
+          'text-rotation': 'autorotate',
+          color: 'white',
+          'text-outline-color': 'black',
+          'text-outline-width': 2,
         },
       },
       {
-        selector: "edge.highlighted",
+        selector: 'edge.highlighted',
         style: {
           width: 16,
-          label: (edge: EdgeSingular) =>
-            ctorMap[edge.data("displayCtorId")].name || "#000000",
+          label: (edge: EdgeSingular) => ctorMap[edge.data('displayCtorId')].name || '#000000',
 
-          "transition-property": "background-color, line-color",
-          "transition-duration": "100ms",
-          "z-index": 9999,
-          "line-color": (edge: EdgeSingular) =>
-            ctorMap[edge.data("displayCtorId")].colorPrimary || "#000000",
+          'transition-property': 'background-color, line-color',
+          'transition-duration': '100ms',
+          'z-index': 9999,
+          'line-color': (edge: EdgeSingular) =>
+            ctorMap[edge.data('displayCtorId')].colorPrimary || '#000000',
         },
       },
       {
-        selector: ".faded",
+        selector: '.faded',
         style: {
           opacity: 0.6,
-          "text-opacity": 0.6,
+          'text-opacity': 0.6,
         },
       },
     ],
@@ -476,7 +400,7 @@ export default function DriverGraph() {
   const cyStyle = useMemo(
     // #f4f4f4 (Original light grey)
     // #15151e (F1.com background)
-    () => ({ width: "100%", height: "100%", backgroundColor: "#272822" }),
+    () => ({ width: '100%', height: '100%', backgroundColor: '#272822' }),
     []
   );
 
@@ -489,128 +413,173 @@ export default function DriverGraph() {
       (cy as any)._driverGraphEventsBound = true; // guard against binding duplicate listeners
 
       /* EVENT LISTENERS */
-      // TODO: Decide what to do on tap / click events
-      // cy.on('tap', 'edge', (event: EventObject) => {
-      //   const edge: EdgeSingular = event.target;
-      //   const source: string = edge.source().data('name') || edge.source().id();
-      //   const target: string = edge.target().data('name') || edge.target().id();
-      //   const label = edge
-      //     .data('yearsByCtor')
-      //     .map((pair: YearsByCtor) => `${pair.ctor}[${pair.years.join(' ,')}]`)
-      //     .join(', ');
+      cy.on('tap', 'node', (event: EventObject) => {
+        const node: NodeSingular = event.target;
+        const teammatesByYearByCtor: TeammatesByYearByCtor[] = node.data('teammatesByYearByCtor');
 
-      //   setSelectedInfo(`${source} & ${target} were teammates at ${label}`);
-      // });
+        let index: number = 0;
+        const infoDivs = [
+          <div
+            key={index++}
+            className="driverInfoDiv"
+            style={{
+              backgroundColor: ctorMap[node.data('displayCtorId')]?.colorPrimary || '#000000',
+              borderColor: ctorMap[node.data('displayCtorId')]?.colorSecondary || '#000000',
+            }}
+          >
+            {node.data('name')}
+          </div>,
+          ...teammatesByYearByCtor.map(({ ctorId, years }) => (
+            <div
+              key={index++}
+              className="driverTeamsInfoDiv"
+              style={{
+                backgroundColor: ctorMap[ctorId]?.colorPrimary || '#000000',
+                borderColor: ctorMap[ctorId]?.colorSecondary || '#000000',
+              }}
+            >
+              <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{ctorMap[ctorId].name}</div>
+              {years.map(([year, teammates]) => (
+                <div key={index++}>
+                  {year}:{' '}
+                  {teammates
+                    .map((driverId) => {
+                      const el = cy.getElementById(`${driverId}`);
+                      return el.data('forename')[0] + '. ' + el.data('surname');
+                    })
+                    .join(', ')}
+                </div>
+              ))}
+            </div>
+          )),
+        ];
 
-      // cy.on('tap', (event: EventObject) => {
-      //   if (event.target === cy) {
-      //     cy.elements().removeClass('faded highlighted');
-      //     setSelectedInfo(null);
-      //     setSelectedDrivers([]);
-      //   }
-      // });
-
-      cy.on("tap", "node", (event: EventObject) => {
-        const node = event.target;
-        addElementToForeground(node);
-        node.neighborhood().forEach((edge: EdgeSingular) => {
-          addElementToForeground(edge);
-        });
+        setDisplayedInfo(infoDivs);
       });
 
-      cy.on("mouseover", "node", (event: EventObject) => {
+      cy.on('tap', 'edge', (event: EventObject) => {
+        const edge: EdgeSingular = event.target;
+        const yearsByCtor = edge.data('yearsByCtor');
+        const driver1Name: string = edge.source().data('name') || edge.source().id();
+        const driver2Name: string = edge.target().data('name') || edge.target().id();
+
+        let index = 0;
+        const infoDivs = [
+          <div
+            key={index++}
+            className="driverInfoDiv"
+            style={{
+              borderColor: ctorMap[edge.data('displayCtorId')]?.colorSecondary || '#000000',
+              backgroundColor: ctorMap[edge.data('displayCtorId')]?.colorPrimary || '#000000',
+            }}
+          >
+            <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{driver1Name}</div>
+            <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{driver2Name}</div>
+          </div>,
+          ...[...yearsByCtor].reverse().map((ybc: YearsByCtor) => (
+            <div
+              key={index++}
+              className="driverTeamsInfoDiv"
+              style={{
+                backgroundColor: ctorMap[ybc.ctorId]?.colorPrimary || '#000000',
+                borderColor: ctorMap[ybc.ctorId]?.colorSecondary || '#000000',
+              }}
+            >
+              <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{ybc.ctor}</div>
+              <div style={{ marginTop: '0.25rem', fontSize: '0.9rem' }}>{ybc.years.join(', ')}</div>
+            </div>
+          )),
+        ];
+
+        setDisplayedInfo(infoDivs);
+      });
+
+      // Clear on background click
+      cy.on('tap', (event: EventObject) => {
+        if (event.target === cy) {
+          setDisplayedInfo([]);
+        }
+      });
+
+      cy.on('mouseover', 'node', (event: EventObject) => {
         const node: NodeSingular = event.target;
-        node.connectedEdges().addClass("highlighted");
+        node.connectedEdges().addClass('highlighted');
 
         addElementToForeground(node);
         node.neighborhood().forEach((edge: EdgeSingular) => {
           addElementToForeground(edge);
         });
 
-        node.addClass("hovered");
+        node.addClass('hovered');
 
-        node.neighborhood("node").forEach((neighbor: NodeSingular) => {
+        node.neighborhood('node').forEach((neighbor: NodeSingular) => {
           const edge: EdgeSingular = node.edgesWith(neighbor)[0];
-          const edgeColor =
-            ctorMap[edge.data("displayCtorId")]?.colorPrimary || "#000000";
+          const edgeColor = ctorMap[edge.data('displayCtorId')]?.colorPrimary || '#000000';
           const edgeColorSecondary =
-            ctorMap[edge.data("displayCtorId")]?.colorSecondary ||
-            edgeColor ||
-            "#000000";
-          neighbor.data("hoverColor", edgeColor);
-          neighbor.data("hoverColorSecondary", edgeColorSecondary);
-          neighbor.addClass("neighbor-hovered");
+            ctorMap[edge.data('displayCtorId')]?.colorSecondary || edgeColor || '#000000';
+          neighbor.data('hoverColor', edgeColor);
+          neighbor.data('hoverColorSecondary', edgeColorSecondary);
+          neighbor.addClass('neighbor-hovered');
         });
-        cy.elements().not(node.neighborhood().union(node)).addClass("faded");
+        cy.elements().not(node.neighborhood().union(node)).addClass('faded');
 
         // Highlight connected edges
-        node.connectedEdges().addClass("highlighted");
+        node.connectedEdges().addClass('highlighted');
       });
 
-      cy.on("mouseout", "node", (event: EventObject) => {
-        cy.elements().removeClass("faded");
+      cy.on('mouseout', 'node', (event: EventObject) => {
+        cy.elements().removeClass('faded');
         const node: NodeSingular = event.target;
-        node.connectedEdges().removeClass("highlighted");
+        node.connectedEdges().removeClass('highlighted');
 
         removeElementFromForeground(node);
         node.neighborhood().forEach((edge: any) => {
           removeElementFromForeground(edge);
         });
 
-        node.removeClass("hovered");
-        node.neighborhood("node").forEach((neighbor: NodeSingular) => {
-          neighbor.removeData?.("hoverColor");
-          neighbor.removeClass("neighbor-hovered");
+        node.removeClass('hovered');
+        node.neighborhood('node').forEach((neighbor: NodeSingular) => {
+          neighbor.removeData?.('hoverColor');
+          neighbor.removeClass('neighbor-hovered');
         });
 
-        node.connectedEdges().removeClass("highlighted");
+        node.connectedEdges().removeClass('highlighted');
       });
 
-      cy.on("mouseover", "edge", (event: EventObject) => {
+      cy.on('mouseover', 'edge', (event: EventObject) => {
         const edge: EdgeSingular = event.target;
         addElementToForeground(edge);
         edge.connectedNodes().forEach((node: NodeSingular) => {
           addElementToForeground(node);
 
-          const edgeColor =
-            ctorMap[edge.data("displayCtorId")]?.colorPrimary || "#000000";
+          const edgeColor = ctorMap[edge.data('displayCtorId')]?.colorPrimary || '#000000';
           const edgeColorSecondary =
-            ctorMap[edge.data("displayCtorId")]?.colorSecondary ||
-            edgeColor ||
-            "#000000";
-          node.data("hoverColor", edgeColor);
-          node.data("hoverColorSecondary", edgeColorSecondary);
-          node.addClass("neighbor-hovered");
+            ctorMap[edge.data('displayCtorId')]?.colorSecondary || edgeColor || '#000000';
+          node.data('hoverColor', edgeColor);
+          node.data('hoverColorSecondary', edgeColorSecondary);
+          node.addClass('neighbor-hovered');
         });
-        edge.addClass("highlighted");
+        edge.addClass('highlighted');
       });
 
-      cy.on("mouseout", "edge", (event: EventObject) => {
+      cy.on('mouseout', 'edge', (event: EventObject) => {
         const edge: EdgeSingular = event.target;
         removeElementFromForeground(edge);
 
         edge.connectedNodes().forEach((node: NodeSingular) => {
           removeElementFromForeground(node);
-          node.removeData?.("hoverColor");
-          node.removeClass("neighbor-hovered");
+          node.removeData?.('hoverColor');
+          node.removeClass('neighbor-hovered');
         });
-        edge.removeClass("highlighted");
+        edge.removeClass('highlighted');
       });
     }
   }, []);
 
   return (
-    <div
-      style={{
-        display: "flex",
-        height: "100vh", // full screen height
-      }}
-    >
+    <div id="mainContainer">
       {/* Graph and Timeline Container*/}
-      <div
-        id="cy"
-        style={{ flex: 1, display: "flex", flexDirection: "column" }}
-      >
+      <div id="cyContainer">
         {/* Graph */}
         <div style={{ flex: 1 }}>
           <CytoscapeComponent
@@ -623,23 +592,7 @@ export default function DriverGraph() {
         </div>
 
         {/* Timeline Slider */}
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "center",
-            flexWrap: "wrap",
-            alignItems: "center",
-            height: "15%",
-            width: "100%",
-
-            // settings to allow timeline to float over graph
-            background: "transparent",
-            position: "absolute",
-            bottom: "0px",
-            left: "20px",
-          }}
-        >
+        <div id="timelineContainer">
           <Range
             allowOverlap={true}
             draggableTrack={true} // enabling this means can't click track to go to year
@@ -666,13 +619,13 @@ export default function DriverGraph() {
                 key={props.key}
                 style={{
                   ...props.style,
-                  width: "5px",
-                  height: index % 5 === 0 ? "30px" : "20px",
+                  width: '5px',
+                  height: index % 5 === 0 ? '30px' : '20px',
                   backgroundColor:
                     sliderThumbValues[0] <= index + TIMELINE_MIN_YEAR &&
                     index + TIMELINE_MIN_YEAR <= sliderThumbValues[1]
-                      ? "black"
-                      : "#ccc",
+                      ? 'black'
+                      : '#ccc',
                 }}
               />
             )}
@@ -683,59 +636,59 @@ export default function DriverGraph() {
                 style={{
                   ...props.style,
                   flexGrow: 1,
-                  width: "90%",
-                  display: "flex",
-                  height: "36px",
+                  width: '90%',
+                  display: 'flex',
+                  height: '36px',
                 }}
               >
                 <div
                   ref={props.ref}
                   style={{
-                    width: "100%",
-                    height: "5px",
-                    borderRadius: "4px",
+                    width: '100%',
+                    height: '5px',
+                    borderRadius: '4px',
                     background: getTrackBackground({
                       values: sliderThumbValues,
-                      colors: ["#ccc", "black", "#ccc"],
+                      colors: ['#ccc', 'black', '#ccc'],
                       min: TIMELINE_MIN_YEAR,
                       max: TIMELINE_MAX_YEAR,
                     }),
-                    alignSelf: "center",
+                    alignSelf: 'center',
                   }}
                 >
                   {children}
                 </div>
               </div>
             )}
-            renderThumb={({ index, props, isDragged }) => (
+            renderThumb={({ index, props }) => (
               <div
                 {...props}
                 key={props.key}
                 style={{
                   ...props.style,
-                  height: "42px",
-                  width: "5px",
-                  borderRadius: "4px",
-                  backgroundColor: "black",
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  boxShadow: "0px 2px 6px #AAA",
-                  top: index === 0 ? "65%" : "35%",
-                  pointerEvents: "auto",
+                  height: '42px',
+                  width: '5px',
+                  borderRadius: '4px',
+                  backgroundColor: 'black',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  boxShadow: '0px 2px 6px #AAA',
+                  top: index === 0 ? '65%' : '35%',
+                  pointerEvents: 'auto',
                 }}
               >
                 <div
                   style={{
-                    position: "absolute",
-                    top: index === 0 ? "30px" : "-13px", // TODO: get rid of hardcoded vals
-                    color: "#fff",
-                    fontWeight: "bold",
-                    fontSize: "14px",
-                    fontFamily: "Arial,Helvetica Neue,Helvetica,sans-serif",
-                    padding: "4px",
-                    borderRadius: "4px",
-                    backgroundColor: "black",
+                    position: 'absolute',
+                    top: index === 0 ? '30px' : '-13px', // TODO: get rid of hardcoded vals
+                    color: '#fff',
+                    fontWeight: 'bold',
+                    fontSize: '14px',
+                    fontFamily: 'Arial,Helvetica Neue,Helvetica,sans-serif',
+                    padding: '4px',
+                    borderRadius: '4px',
+                    backgroundColor: 'black',
                   }}
                 >
                   {sliderThumbValues[index]}
@@ -747,41 +700,22 @@ export default function DriverGraph() {
       </div>
 
       {/* Display Panel*/}
-      {/* <div
-        style={{
-          width: '15%', // quarter width
-          backgroundColor: '#fafafa',
-          borderLeft: '1px solid #ddd',
-          padding: '1rem',
-          overflowY: 'auto',
-        }}
-      >
-        <h2
-          style={{
-            fontSize: '1.2rem',
-            fontWeight: 'bold',
-            marginBottom: '0.5rem',
-            textAlign: 'center',
-          }}
-        >
-          Equal Machinery
-        </h2>
-        {selectedInfo}
-        <button
-          onClick={() => {
-            savePositions(cyRef.current);
-          }}
-        >
-          Save Positions
-        </button>
-        <button
-          onClick={() => {
-            centerViewport(cyRef.current);
-          }}
-        >
-          Center Viewport
-        </button>
-      </div> */}
+      <div id="displayPanel">
+        {displayedInfo.length > 0 ? (
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.5rem',
+              alignItems: 'center',
+            }}
+          >
+            {displayedInfo}
+          </div>
+        ) : (
+          <p style={{ color: '#aaa', textAlign: 'center' }}>Click a node or edge</p>
+        )}
+      </div>
     </div>
   );
 }
