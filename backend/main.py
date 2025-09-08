@@ -194,7 +194,7 @@ def to_cytoscape_data(
                                 for ctorId, years in driver.teammates_by_year_by_ctor.items()
                             ],
                             key=lambda pair: (
-                                min([year[0] for year in pair["years"]]),
+                                max([year[0] for year in pair["years"]]),
                                 len(pair["years"]),
                             ), reverse=True
                         ),
